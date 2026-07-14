@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Africa Vision · Connexion</title>
+
+<!-- Firebase (compat, comme les autres plateformes Africa Vision) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --navy-950:#0a1830;
+    --navy-900:#0f2142;
+    --navy-800:#16305c;
+    --navy-700:#1e3f78;
+    --cream:#f6f1e6;
+    --paper:#fffdf8;
+    --gold:#c99a3c;
+    --gold-light:#e6c876;
+    --ink:#0f1b2d;
+    --slate:#5c6b83;
+    --slate-light:#93a1b8;
+    --red-flag:#c8342f;
+    --yellow-flag:#f2b632;
+    --green-flag:#1e7a46;
+    --error-bg:#fdecec;
+    --error-text:#a32621;
+    --radius:16px;
+  }
+
+  *{box-sizing:border-box;}
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.01ms !important; transition-duration:0.01ms !important;}
+  }
+
+  html,body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(1100px 600px at 15% -10%, #16305c 0%, transparent 60%),
+      radial-gradient(900px 700px at 110% 10%, #14294e 0%, transparent 55%),
+      var(--navy-950);
+    font-family:'Inter', system-ui, sans-serif;
+    color:var(--ink);
+  }
+
+  /* -- carte grille de fond, évoque une carte de navigation / route maritime -- */
+  .grid-bg{
+    position:fixed; inset:0; z-index:0; opacity:0.10; pointer-events:none;
+    background-image:
+      linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px);
+    background-size:42px 42px;
+  }
+
+  .route-line{
+    position:fixed; z-index:0; pointer-events:none; opacity:0.35;
+  }
+
+  .wrap{
+    position:relative; z-index:1;
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    padding:28px 18px 44px;
+  }
+
+  .card{
+    width:100%; max-width:420px;
+    background:var(--paper);
+    border-radius:var(--radius);
+    box-shadow:0 30px 60px -20px rgba(4,10,25,.55), 0 2px 0 rgba(255,255,255,.04) inset;
+    overflow:hidden;
+    animation:riseIn .55s cubic-bezier(.2,.7,.2,1) both;
+  }
+  @keyframes riseIn{
+    from{opacity:0; transform:translateY(14px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+
+  /* -- en-tête façon manifeste d'expédition -- */
+  .stub{
+    background:linear-gradient(160deg, var(--navy-900), var(--navy-800) 70%);
+    color:var(--cream);
+    padding:30px 28px 24px;
+    position:relative;
+  }
+  .stub::after{
+    content:"";
+    position:absolute; left:0; right:0; bottom:-1px; height:14px;
+    background:
+      radial-gradient(circle at 10px 0, transparent 9px, var(--paper) 9.5px) 0 -7px / 24px 14px repeat-x;
+  }
+  .flagbar{
+    height:3px; width:56px; border-radius:2px; margin-bottom:18px;
+    background:linear-gradient(90deg, var(--red-flag) 0 33%, var(--yellow-flag) 33% 66%, var(--green-flag) 66% 100%);
+  }
+  .brandrow{display:flex; align-items:center; gap:12px; margin-bottom:16px;}
+  .mark{
+    width:42px; height:42px; border-radius:11px; flex:none;
+    background:linear-gradient(145deg, var(--gold-light), var(--gold));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:16px; color:var(--navy-950);
+  }
+  .brandname{font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:17px; letter-spacing:.2px;}
+  .brandsub{font-size:11.5px; color:#b9c6de; letter-spacing:.14em; text-transform:uppercase; margin-top:2px;}
+
+  .eyebrow{
+    font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--gold-light);
+    display:flex; align-items:center; gap:8px; margin-bottom:8px;
+  }
+  .eyebrow .dot{width:4px;height:4px;border-radius:50%;background:var(--gold-light);}
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:24px; line-height:1.25; margin:0 0 4px; font-weight:600;
+  }
+  .stub p{margin:0; font-size:13.5px; color:#b9c6de;}
+
+  /* -- corps -- */
+  .body{padding:30px 28px 28px;}
+
+  .field{margin-bottom:16px;}
+  label{
+    display:block; font-size:12.5px; font-weight:600; color:var(--slate);
+    margin-bottom:6px; letter-spacing:.02em;
+  }
+  .input-shell{
+    position:relative; display:flex; align-items:center;
+    border:1.5px solid #e3ddcd; border-radius:11px; background:#fff;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .input-shell:focus-within{
+    border-color:var(--navy-700);
+    box-shadow:0 0 0 3px rgba(30,63,120,.12);
+  }
+  .input-shell svg{margin-left:13px; flex:none; color:var(--slate-light);}
+  input[type="email"], input[type="password"], input[type="text"]{
+    width:100%; border:none; outline:none; background:transparent;
+    padding:13px 12px; font-size:15px; font-family:inherit; color:var(--ink);
+  }
+  input::placeholder{color:#b7bdc9;}
+  .toggle-pw{
+    background:none; border:none; cursor:pointer; padding:8px 12px; color:var(--slate-light);
+    display:flex; align-items:center;
+  }
+  .toggle-pw:hover{color:var(--slate);}
+
+  .row-between{display:flex; align-items:center; justify-content:space-between; margin:2px 0 20px;}
+  .remember{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--slate); cursor:pointer; user-select:none;}
+  .remember input{width:15px; height:15px; accent-color:var(--navy-700); cursor:pointer;}
+  .forgot{font-size:13px; color:var(--navy-700); text-decoration:none; font-weight:600;}
+  .forgot:hover{text-decoration:underline;}
+
+  .btn{
+    width:100%; border:none; border-radius:11px; padding:14px 16px;
+    font-family:'Space Grotesk', sans-serif; font-size:15px; font-weight:600; letter-spacing:.02em;
+    background:linear-gradient(160deg, var(--navy-700), var(--navy-900));
+    color:#fff; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:9px;
+    transition:transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+    box-shadow:0 12px 24px -10px rgba(15,33,66,.55);
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .btn:active{transform:translateY(0);}
+  .btn:disabled{opacity:.65; cursor:not-allowed; transform:none;}
+
+  .spinner{
+    width:16px; height:16px; border-radius:50%;
+    border:2px solid rgba(255,255,255,.35); border-top-color:#fff;
+    animation:spin .7s linear infinite; display:none;
+  }
+  .btn.loading .spinner{display:inline-block;}
+  .btn.loading .btn-label{opacity:.85;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .alert{
+    display:none; align-items:flex-start; gap:9px;
+    background:var(--error-bg); color:var(--error-text);
+    border:1px solid #f3c6c4; border-radius:10px;
+    padding:11px 13px; font-size:13px; line-height:1.4; margin-bottom:16px;
+  }
+  .alert.show{display:flex;}
+  .alert svg{flex:none; margin-top:1px;}
+
+  .footer-note{
+    text-align:center; margin-top:20px; font-size:12px; color:var(--slate-light);
+  }
+  .footer-note strong{color:var(--slate);}
+
+  @media (max-width:400px){
+    .stub{padding:26px 20px 22px;}
+    .body{padding:26px 20px 24px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<div class="wrap">
+  <div class="card">
+
+    <div class="stub">
+      <div class="flagbar"></div>
+      <div class="brandrow">
+        <div class="mark">AV</div>
+        <div>
+          <div class="brandname">Africa Vision</div>
+          <div class="brandsub">Multiservices</div>
+        </div>
+      </div>
+      <div class="eyebrow"><span class="dot"></span> Espace interne · Conakry</div>
+      <h1>Connexion à votre espace</h1>
+      <p>Cargo, billetterie et gestion — accédez à votre tableau de bord.</p>
+    </div>
+
+    <div class="body">
+
+      <div class="alert" id="alertBox">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span id="alertMsg">Message d'erreur</span>
+      </div>
+
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label for="email">Adresse email</label>
+          <div class="input-shell">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h13A2.5 2.5 0 0 1 21 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5v-11Z" stroke="currentColor" stroke-width="1.6"/><path d="m4 7 7.29 5.47a1.2 1.2 0 0 0 1.42 0L20 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <input type="email" id="email" placeholder="nom@africavision.com" autocomplete="username" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="password">Mot de passe</label>
+          <div class="input-shell">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="5" y="10.5" width="14" height="9.5" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" stroke-width="1.6"/></svg>
+            <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required>
+            <button type="button" class="toggle-pw" id="togglePw" aria-label="Afficher le mot de passe">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" id="eyeIcon"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="row-between">
+          <label class="remember"><input type="checkbox" id="remember" checked> Se souvenir de moi</label>
+          <a href="#" class="forgot" id="forgotLink">Mot de passe oublié ?</a>
+        </div>
+
+        <button type="submit" class="btn" id="loginBtn">
+          <span class="spinner"></span>
+          <span class="btn-label">Se connecter</span>
+        </button>
+      </form>
+
+      <div class="footer-note">Accès réservé à <strong>l'équipe Africa Vision</strong></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // CONFIGURATION FIREBASE — à remplacer par celle du projet
+  // "africa-vision-3b38f" (Firebase Console > Paramètres du projet
+  // > Vos applications > Config SDK). C'est la même config que sur
+  // tes autres plateformes Africa Vision.
+  // ============================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyDoWCBh3rschFm97Z5Y7ax1bamhadDS42Q",
+    authDomain: "africa-vision-3b38f.firebaseapp.com",
+    projectId: "africa-vision-3b38f",
+    storageBucket: "africa-vision-3b38f.firebasestorage.app",
+    messagingSenderId: "233363053035",
+    appId: "1:233363053035:web:6a5ef497fbf0991216e1ae"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+
+  // Page vers laquelle on redirige après une connexion réussie.
+  // À adapter si ton tableau de bord porte un autre nom de fichier.
+  const REDIRECT_URL = "dashboard.html";
+
+  const form = document.getElementById('loginForm');
+  const emailInput = document.getElementById('email');
+  const pwInput = document.getElementById('password');
+  const rememberInput = document.getElementById('remember');
+  const btn = document.getElementById('loginBtn');
+  const alertBox = document.getElementById('alertBox');
+  const alertMsg = document.getElementById('alertMsg');
+  const togglePw = document.getElementById('togglePw');
+
+  togglePw.addEventListener('click', () => {
+    const isPw = pwInput.type === 'password';
+    pwInput.type = isPw ? 'text' : 'password';
+    togglePw.setAttribute('aria-label', isPw ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+  });
+
+  function showError(msg){
+    alertMsg.textContent = msg;
+    alertBox.classList.add('show');
+  }
+  function hideError(){
+    alertBox.classList.remove('show');
+  }
+  function setLoading(isLoading){
+    btn.disabled = isLoading;
+    btn.classList.toggle('loading', isLoading);
+  }
+
+  function messageFromError(code){
+    switch(code){
+      case 'auth/invalid-email': return "Cette adresse email n'est pas valide.";
+      case 'auth/user-disabled': return "Ce compte a été désactivé. Contactez un administrateur.";
+      case 'auth/user-not-found': return "Aucun compte ne correspond à cette adresse email.";
+      case 'auth/wrong-password': return "Mot de passe incorrect.";
+      case 'auth/invalid-credential': return "Email ou mot de passe incorrect.";
+      case 'auth/too-many-requests': return "Trop de tentatives. Réessayez dans quelques minutes.";
+      case 'auth/network-request-failed': return "Problème de connexion internet. Vérifiez votre réseau.";
+      default: return "Connexion impossible pour le moment. Réessayez.";
+    }
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideError();
+
+    const email = emailInput.value.trim();
+    const password = pwInput.value;
+
+    if(!email || !password){
+      showError("Merci de renseigner votre email et votre mot de passe.");
+      return;
+    }
+
+    setLoading(true);
+    try{
+      const persistence = rememberInput.checked
+        ? firebase.auth.Auth.Persistence.LOCAL
+        : firebase.auth.Auth.Persistence.SESSION;
+      await auth.setPersistence(persistence);
+
+      await auth.signInWithEmailAndPassword(email, password);
+      // Connexion réussie
+      window.location.href = REDIRECT_URL;
+    }catch(err){
+      showError(messageFromError(err.code));
+      setLoading(false);
+    }
+  });
+
+  document.getElementById('forgotLink').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const email = emailInput.value.trim();
+    if(!email){
+      showError("Saisissez d'abord votre email ci-dessus, puis cliquez sur ce lien.");
+      return;
+    }
+    hideError();
+    try{
+      await auth.sendPasswordResetEmail(email);
+      showError("Un email de réinitialisation a été envoyé à " + email + ".");
+      alertBox.style.background = "#eafaf1";
+      alertBox.style.color = "#1e7a46";
+      alertBox.style.borderColor = "#bfe8cf";
+    }catch(err){
+      showError(messageFromError(err.code));
+    }
+  });
+
+  // Si un utilisateur est déjà connecté, on l'envoie directement au tableau de bord.
+  auth.onAuthStateChanged((user) => {
+    if(user){
+      window.location.href = REDIRECT_URL;
+    }
+  });
+</script>
+
+</body>
+</html>

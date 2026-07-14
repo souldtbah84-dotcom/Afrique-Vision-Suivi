@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Africa Vision · Dashboard</title>
+
+<!-- Firebase (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --navy-950:#0a1830;
+    --navy-900:#0f2142;
+    --navy-800:#16305c;
+    --navy-700:#1e3f78;
+    --cream:#f6f1e6;
+    --paper:#fffdf8;
+    --gold:#c99a3c;
+    --gold-light:#e6c876;
+    --ink:#0f1b2d;
+    --slate:#5c6b83;
+    --slate-light:#93a1b8;
+    --line:#e7e1d2;
+    --red-flag:#c8342f;
+    --yellow-flag:#f2b632;
+    --green-flag:#1e7a46;
+    --blue-status:#2b5fb0;
+    --error-bg:#fdecec;
+    --error-text:#a32621;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.01ms !important; transition-duration:.01ms !important;} }
+
+  html,body{margin:0; background:var(--cream); font-family:'Inter',system-ui,sans-serif; color:var(--ink);}
+  a{color:inherit; text-decoration:none;}
+  button{font-family:inherit;}
+
+  /* ---------- HEADER ---------- */
+  header{
+    position:sticky; top:0; z-index:30;
+    background:var(--paper); border-bottom:1px solid var(--line);
+  }
+  .flagbar{height:3px; background:linear-gradient(90deg, var(--red-flag) 0 33%, var(--yellow-flag) 33% 66%, var(--green-flag) 66% 100%);}
+  .headrow{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:13px 18px;
+  }
+  .head-left{display:flex; align-items:center; gap:12px;}
+  .iconbtn{
+    width:38px; height:38px; border-radius:10px; border:1px solid var(--line);
+    background:#fff; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; color:var(--navy-800); position:relative; flex:none;
+  }
+  .iconbtn:hover{background:var(--cream);}
+  .brandmini{display:flex; align-items:center; gap:9px;}
+  .mark-sm{
+    width:30px; height:30px; border-radius:8px; flex:none;
+    background:linear-gradient(145deg, var(--gold-light), var(--gold));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:12px; color:var(--navy-950);
+  }
+  .brandmini-name{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:14.5px;}
+  .head-right{display:flex; align-items:center; gap:8px;}
+  .badge-dot{
+    position:absolute; top:6px; right:6px; width:7px; height:7px; border-radius:50%;
+    background:var(--red-flag); border:1.5px solid #fff; display:none;
+  }
+  .avatar{
+    width:36px; height:36px; border-radius:50%; background:var(--navy-800); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-weight:600; font-size:13px;
+    font-family:'Space Grotesk',sans-serif; cursor:pointer; flex:none;
+  }
+
+  /* ---------- SIDEBAR DRAWER ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(10,24,48,.45); z-index:40;
+    opacity:0; pointer-events:none; transition:opacity .2s ease;
+  }
+  .overlay.show{opacity:1; pointer-events:auto;}
+  .drawer{
+    position:fixed; top:0; left:0; bottom:0; width:280px; max-width:82vw;
+    background:var(--paper); z-index:50; transform:translateX(-100%);
+    transition:transform .25s cubic-bezier(.2,.7,.2,1);
+    display:flex; flex-direction:column;
+  }
+  .drawer.show{transform:translateX(0);}
+  .drawer-head{padding:22px 20px 14px; border-bottom:1px solid var(--line);}
+  .drawer-nav{padding:14px 12px; overflow-y:auto; flex:1;}
+  .nav-label{
+    font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--slate-light);
+    padding:14px 12px 6px;
+  }
+  .nav-item{
+    display:flex; align-items:center; gap:12px; padding:11px 12px; border-radius:10px;
+    color:var(--navy-900); font-size:14.5px; font-weight:500; cursor:pointer;
+  }
+  .nav-item:hover{background:var(--cream);}
+  .nav-item.active{background:var(--navy-900); color:#fff;}
+  .nav-item svg{flex:none; opacity:.85;}
+  .drawer-foot{
+    border-top:1px solid var(--line); padding:14px 18px;
+    display:flex; align-items:center; gap:11px;
+  }
+  .drawer-foot .who{flex:1; min-width:0;}
+  .drawer-foot .who .name{font-weight:600; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .drawer-foot .who .role{font-size:11.5px; color:var(--slate-light);}
+  .logout-btn{
+    border:none; background:none; color:var(--slate); cursor:pointer; padding:6px; border-radius:8px;
+  }
+  .logout-btn:hover{background:var(--cream); color:var(--red-flag);}
+
+  /* ---------- MAIN ---------- */
+  main{max-width:640px; margin:0 auto; padding:22px 18px 60px;}
+
+  .greet-eyebrow{font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--gold); font-weight:700; margin-bottom:6px;}
+  h1.greet{font-family:'Space Grotesk',sans-serif; font-size:24px; margin:0 0 4px;}
+  .greet-sub{color:var(--slate); font-size:14px; margin:0 0 18px;}
+
+  .cta{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    background:linear-gradient(160deg, var(--navy-700), var(--navy-900));
+    color:#fff; border-radius:13px; padding:16px; font-family:'Space Grotesk',sans-serif;
+    font-weight:600; font-size:15.5px; box-shadow:0 14px 26px -12px rgba(15,33,66,.5);
+    margin-bottom:22px;
+  }
+  .cta:active{transform:translateY(1px);}
+
+  /* KPI cards, style "talon de manifeste" */
+  .kpi-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:26px;}
+  .kpi{
+    position:relative; background:var(--paper); border:1px solid var(--line); border-radius:13px;
+    padding:16px 16px 15px 20px; overflow:hidden;
+  }
+  .kpi::before{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:5px;
+  }
+  .kpi.total::before{background:var(--navy-800);}
+  .kpi.attente::before{background:var(--yellow-flag);}
+  .kpi.transit::before{background:var(--blue-status);}
+  .kpi.livre::before{background:var(--green-flag);}
+  .kpi-top{display:flex; align-items:center; gap:8px; margin-bottom:10px;}
+  .kpi-icon{
+    width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex:none;
+  }
+  .kpi.total .kpi-icon{background:#eef1f7; color:var(--navy-800);}
+  .kpi.attente .kpi-icon{background:#fdf2de; color:#a9780f;}
+  .kpi.transit .kpi-icon{background:#e9f0fc; color:var(--blue-status);}
+  .kpi.livre .kpi-icon{background:#e8f6ee; color:var(--green-flag);}
+  .kpi-label{font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--slate); font-weight:600;}
+  .kpi-value{font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; line-height:1;}
+  .kpi-value.skeleton{
+    width:44px; height:26px; border-radius:6px; background:linear-gradient(90deg,#eee,#f6f6f6,#eee);
+    background-size:200% 100%; animation:shimmer 1.3s infinite;
+  }
+  @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+
+  .section-head{display:flex; align-items:center; justify-content:space-between; margin:0 0 12px;}
+  .section-head h2{font-family:'Space Grotesk',sans-serif; font-size:16px; margin:0;}
+  .section-head a{font-size:13px; font-weight:600; color:var(--navy-700);}
+
+  /* Actions rapides */
+  .actions{background:var(--paper); border:1px solid var(--line); border-radius:14px; overflow:hidden; margin-bottom:28px;}
+  .action-row{
+    display:flex; align-items:center; gap:13px; padding:15px 16px;
+    border-bottom:1px solid var(--line); cursor:pointer;
+  }
+  .action-row:last-child{border-bottom:none;}
+  .action-row:hover{background:var(--cream);}
+  .action-icon{
+    width:38px; height:38px; border-radius:10px; background:var(--cream); color:var(--navy-800);
+    display:flex; align-items:center; justify-content:center; flex:none;
+  }
+  .action-title{font-size:14.5px; font-weight:600;}
+  .action-sub{font-size:12.5px; color:var(--slate-light); margin-top:1px;}
+  .action-row .chev{margin-left:auto; color:var(--slate-light); flex:none;}
+
+  /* Colis récents */
+  .recent{display:flex; flex-direction:column; gap:10px; margin-bottom:10px;}
+  .recent-card{
+    background:var(--paper); border:1px solid var(--line); border-radius:13px; padding:14px 16px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .recent-track{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14px; color:var(--navy-800);}
+  .recent-name{font-size:12.5px; color:var(--slate); margin-top:2px;}
+  .status-pill{
+    margin-left:auto; flex:none; font-size:11.5px; font-weight:700; padding:5px 10px; border-radius:999px;
+    display:flex; align-items:center; gap:5px; white-space:nowrap;
+  }
+  .status-pill.en_attente{background:#fdf2de; color:#a9780f;}
+  .status-pill.en_transit{background:#e9f0fc; color:var(--blue-status);}
+  .status-pill.livre{background:#e8f6ee; color:var(--green-flag);}
+  .status-pill .dot{width:6px; height:6px; border-radius:50%; background:currentColor;}
+
+  .empty-state, .error-state{
+    text-align:center; padding:34px 20px; background:var(--paper); border:1px dashed var(--line);
+    border-radius:14px; color:var(--slate);
+  }
+  .empty-state svg, .error-state svg{margin-bottom:10px; color:var(--slate-light);}
+  .empty-state p, .error-state p{margin:0 0 4px; font-size:13.5px;}
+  .error-state{border-color:#f3c6c4; background:var(--error-bg); color:var(--error-text);}
+
+  @media (min-width:560px){
+    .kpi-grid{grid-template-columns:repeat(4,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay"></div>
+<nav class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div class="brandmini">
+      <div class="mark-sm">AV</div>
+      <div class="brandmini-name">Africa Vision</div>
+    </div>
+  </div>
+  <div class="drawer-nav">
+    <div class="nav-label">Général</div>
+    <div class="nav-item active">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.7"/></svg>
+      Dashboard
+    </div>
+    <a class="nav-item" href="colis.html">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M21 8.5 12 4l-9 4.5 9 4.5 9-4.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M3 8.5V16l9 4.5 9-4.5V8.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+      Colis
+    </a>
+    <a class="nav-item" href="clients.html">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 20c.7-3.4 3-5.3 5.5-5.3s4.8 1.9 5.5 5.3M16 9.5a2.9 2.9 0 1 0 0-5.8M20.5 20c-.4-2.4-1.6-4-3.3-4.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      Clients
+    </a>
+    <a class="nav-item" href="inbox.html">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 4h16v16H4z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m4 5 8 7 8-7" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+      Inbox
+    </a>
+    <div class="nav-label">Opérations</div>
+    <a class="nav-item" href="mesures-maritime.html">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 3v18M5 7h14M5 7l-2.5 5a2.5 2.5 0 0 0 5 0L5 7Zm14 0-2.5 5a2.5 2.5 0 0 0 5 0L19 7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      Mesures Maritime
+    </a>
+    <a class="nav-item" href="bordereaux.html">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M7 3h8l4 4v14H7z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 12h5M10 16h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      Bordereaux
+    </a>
+    <a class="nav-item" href="factures.html">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M7 3h8l4 4v14H7z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 12h5M10 16h3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      Factures Commerciales
+    </a>
+    <div class="nav-label">Système</div>
+    <a class="nav-item" href="configuration.html">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.4-2-3.4-2.3.9a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4l-.5 2.6a7.6 7.6 0 0 0-2.6 1.5l-2.3-.9-2 3.4 2 1.4a7.6 7.6 0 0 0 0 3l-2 1.4 2 3.4 2.3-.9c.8.7 1.6 1.2 2.6 1.5l.5 2.6h4l.5-2.6a7.6 7.6 0 0 0 2.6-1.5l2.3.9 2-3.4-2-1.4Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+      Configuration
+    </a>
+  </div>
+  <div class="drawer-foot">
+    <div class="avatar" id="drawerAvatar">··</div>
+    <div class="who">
+      <div class="name" id="drawerName">Chargement…</div>
+      <div class="role">Équipe Africa Vision</div>
+    </div>
+    <button class="logout-btn" id="logoutBtn" aria-label="Se déconnecter">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+</nav>
+
+<header>
+  <div class="flagbar"></div>
+  <div class="headrow">
+    <div class="head-left">
+      <button class="iconbtn" id="menuBtn" aria-label="Ouvrir le menu">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <div class="brandmini">
+        <div class="mark-sm">AV</div>
+        <div class="brandmini-name">Africa Vision</div>
+      </div>
+    </div>
+    <div class="head-right">
+      <button class="iconbtn" aria-label="Notifications">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M13.7 21a2 2 0 0 1-3.4 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span class="badge-dot" id="notifDot"></span>
+      </button>
+      <div class="avatar" id="headAvatar">··</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="greet-eyebrow">Espace interne · Conakry</div>
+  <h1 class="greet" id="greetName">Bonjour</h1>
+  <p class="greet-sub">Voici l'état de votre activité logistique aujourd'hui.</p>
+
+  <a class="cta" href="nouveau-colis.html">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    Nouveau colis
+  </a>
+
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi total">
+      <div class="kpi-top">
+        <div class="kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M21 8.5 12 4l-9 4.5 9 4.5 9-4.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 8.5V16l9 4.5 9-4.5V8.5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+        <div class="kpi-label">Total colis</div>
+      </div>
+      <div class="kpi-value skeleton" id="kpiTotal"></div>
+    </div>
+    <div class="kpi attente">
+      <div class="kpi-top">
+        <div class="kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3.2 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+        <div class="kpi-label">En attente</div>
+      </div>
+      <div class="kpi-value skeleton" id="kpiAttente"></div>
+    </div>
+    <div class="kpi transit">
+      <div class="kpi-top">
+        <div class="kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 16h13v-3a3 3 0 0 0-3-3h-2V8H3v8Zm13-6h3l3 3v3h-6v-6Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="7" cy="18" r="1.6" stroke="currentColor" stroke-width="1.6"/><circle cx="17.5" cy="18" r="1.6" stroke="currentColor" stroke-width="1.6"/></svg></div>
+        <div class="kpi-label">En transit</div>
+      </div>
+      <div class="kpi-value skeleton" id="kpiTransit"></div>
+    </div>
+    <div class="kpi livre">
+      <div class="kpi-top">
+        <div class="kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 12.5 9.5 18 20 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="kpi-label">Livrés</div>
+      </div>
+      <div class="kpi-value skeleton" id="kpiLivre"></div>
+    </div>
+  </div>
+
+  <div class="section-head"><h2>Actions rapides</h2></div>
+  <div class="actions">
+    <a class="action-row" href="nouveau-colis.html">
+      <div class="action-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <div><div class="action-title">Nouveau colis</div><div class="action-sub">Créer une étiquette pour un client</div></div>
+      <svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <a class="action-row" href="colis.html">
+      <div class="action-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m21 21-4.3-4.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <div><div class="action-title">Rechercher un colis</div><div class="action-sub">Par numéro de suivi ou destinataire</div></div>
+      <svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <a class="action-row" href="bordereaux.html">
+      <div class="action-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M7 3h8l4 4v14H7z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 12h5M10 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <div><div class="action-title">Générer un bordereau</div><div class="action-sub">Expéditions maritimes ou aériennes</div></div>
+      <svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <a class="action-row" href="paiements.html">
+      <div class="action-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.8"/></svg></div>
+      <div><div class="action-title">Consulter les paiements</div><div class="action-sub">Transactions et factures</div></div>
+      <svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+
+  <div class="section-head"><h2>Colis récents</h2><a href="colis.html">Voir tout →</a></div>
+  <div class="recent" id="recentList">
+    <!-- rempli par JS -->
+  </div>
+</main>
+
+<script>
+  // ============================================================
+  // CONFIGURATION FIREBASE — mets les mêmes clés que sur la page
+  // de connexion (projet "africa-vision-3b38f").
+  // ============================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyDoWCBh3rschFm97Z5Y7ax1bamhadDS42Q",
+    authDomain: "africa-vision-3b38f.firebaseapp.com",
+    projectId: "africa-vision-3b38f",
+    storageBucket: "africa-vision-3b38f.firebasestorage.app",
+    messagingSenderId: "233363053035",
+    appId: "1:233363053035:web:6a5ef497fbf0991216e1ae"
+  };
+
+  // Mets à "false" pour prévisualiser le design SANS être connecté
+  // (utile tant que la page de connexion n'est pas encore réglée).
+  const REQUIRE_AUTH = true;
+  const LOGIN_URL = "index.html";
+
+  // ------------------------------------------------------------
+  // Hypothèse sur la structure Firestore (collection "colis") :
+  //   statut: "en_attente" | "en_transit" | "livre"
+  //   destinataire: { nom, prenom }
+  //   numeroSuivi: "AFR0259X2"
+  //   dateCreation: Firestore Timestamp
+  // Si tes noms de champs sont différents, dis-le moi et j'ajuste
+  // les requêtes ci-dessous en conséquence.
+  // ------------------------------------------------------------
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  const drawer = document.getElementById('drawer');
+  const overlay = document.getElementById('overlay');
+  document.getElementById('menuBtn').addEventListener('click', () => {
+    drawer.classList.add('show'); overlay.classList.add('show');
+  });
+  overlay.addEventListener('click', () => {
+    drawer.classList.remove('show'); overlay.classList.remove('show');
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    auth.signOut().then(() => window.location.href = LOGIN_URL);
+  });
+
+  function initials(name){
+    if(!name) return '··';
+    return name.trim().split(/\s+/).slice(0,2).map(w => w[0].toUpperCase()).join('');
+  }
+
+  function applyUser(user){
+    const name = user.displayName || (user.email ? user.email.split('@')[0] : 'Utilisateur');
+    document.getElementById('greetName').textContent = 'Bonjour, ' + name;
+    document.getElementById('drawerName').textContent = name;
+    document.getElementById('drawerAvatar').textContent = initials(name);
+    document.getElementById('headAvatar').textContent = initials(name);
+  }
+
+  auth.onAuthStateChanged((user) => {
+    if(user){
+      applyUser(user);
+      loadColis();
+    } else if(REQUIRE_AUTH){
+      window.location.href = LOGIN_URL;
+    } else {
+      document.getElementById('greetName').textContent = 'Bonjour (aperçu)';
+      loadColis();
+    }
+  });
+
+  function statusLabel(code){
+    return {en_attente:'En attente', en_transit:'En transit', livre:'Livré'}[code] || code;
+  }
+
+  function renderKPIs(counts){
+    document.getElementById('kpiTotal').textContent = counts.total;
+    document.getElementById('kpiAttente').textContent = counts.en_attente;
+    document.getElementById('kpiTransit').textContent = counts.en_transit;
+    document.getElementById('kpiLivre').textContent = counts.livre;
+    document.querySelectorAll('.kpi-value').forEach(el => el.classList.remove('skeleton'));
+  }
+
+  function renderRecent(docs){
+    const list = document.getElementById('recentList');
+    list.innerHTML = '';
+
+    if(docs.length === 0){
+      list.innerHTML = `
+        <div class="empty-state">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M21 8.5 12 4l-9 4.5 9 4.5 9-4.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 8.5V16l9 4.5 9-4.5V8.5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          <p><strong>Aucun colis enregistré pour le moment.</strong></p>
+          <p>Crée ton premier colis pour le voir apparaître ici.</p>
+        </div>`;
+      return;
+    }
+
+    docs.forEach(d => {
+      const c = d.data();
+      const dest = c.destinataire || {};
+      const statut = c.statut || 'en_attente';
+      const row = document.createElement('a');
+      row.className = 'recent-card';
+      row.href = 'colis.html?id=' + d.id;
+      row.innerHTML = `
+        <div>
+          <div class="recent-track">${c.numeroSuivi || d.id}</div>
+          <div class="recent-name">${[dest.prenom, dest.nom].filter(Boolean).join(' ') || 'Destinataire non renseigné'}</div>
+        </div>
+        <div class="status-pill ${statut}"><span class="dot"></span>${statusLabel(statut)}</div>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  function loadColis(){
+    db.collection('colis').get().then(snap => {
+      const counts = {total:0, en_attente:0, en_transit:0, livre:0};
+      snap.forEach(doc => {
+        counts.total++;
+        const s = doc.data().statut;
+        if(counts[s] !== undefined) counts[s]++;
+      });
+      renderKPIs(counts);
+    }).catch(err => {
+      console.error(err);
+      document.querySelectorAll('.kpi-value').forEach(el => { el.classList.remove('skeleton'); el.textContent = '—'; });
+    });
+
+    db.collection('colis').orderBy('dateCreation', 'desc').limit(5).get().then(snap => {
+      renderRecent(snap.docs);
+    }).catch(err => {
+      console.error(err);
+      document.getElementById('recentList').innerHTML = `
+        <div class="error-state">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          <p><strong>Impossible de charger les colis récents.</strong></p>
+          <p>Vérifie la configuration Firebase et les règles Firestore.</p>
+        </div>`;
+    });
+  }
+</script>
+
+</body>
+</html>
