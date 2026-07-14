@@ -378,13 +378,15 @@
   const REQUIRE_AUTH = true;
   const LOGIN_URL = "index.html";
 
-  // Taux indicatif — à ajuster selon ton taux réel (voir module Routes & Tarifs)
-  const GNF_PER_USD = 9345;
+  // Taux par défaut si aucun taux n'est défini dans Configuration > Routes & Tarifs
+  let GNF_PER_USD = 9345;
 
   // Coordonnées utilisées par le bouton "Au nom de l'entreprise" — adapte si besoin
   const COMPANY_INFO = { nom: "Africa Vision Voyage", telephone: "611830242", email: "" };
 
-  const DESTINATIONS = [
+  // Destinations par défaut si la collection Firestore "destinations" est vide.
+  // Idéalement synchronisées avec ton module Configuration > Routes & Tarifs.
+  let DESTINATIONS = [
     {name:"ÉTATS-UNIS", dial:"+1", flag:"🇺🇸"},
     {name:"FRANCE", dial:"+33", flag:"🇫🇷"},
     {name:"BELGIQUE", dial:"+32", flag:"🇧🇪"},
@@ -444,6 +446,14 @@
     document.getElementById('s_email').value = u.email || "";
   });
 
+  // ---------------- TAUX DE CHANGE (Firestore) ----------------
+  db.collection('config').doc('general').get().then(doc => {
+    if(doc.exists && doc.data().tauxChangeGNFUSD){
+      GNF_PER_USD = Number(doc.data().tauxChangeGNFUSD);
+      updateFees();
+    }
+  }).catch(() => { /* on garde le taux par défaut */ });
+
   // ---------------- CATEGORIES (Firestore) ----------------
   db.collection('categories').get().then(snap => {
     if(!snap.empty){
@@ -452,16 +462,29 @@
     }
   }).catch(() => { /* on garde les catégories par défaut */ });
 
+  // ---------------- DESTINATIONS (Firestore) ----------------
+  db.collection('destinations').get().then(snap => {
+    if(!snap.empty){
+      DESTINATIONS = snap.docs.map(d => ({name: d.data().nom, dial: d.data().dial, flag: d.data().flag}));
+      renderDestinationOptions();
+      updateDestinationUI();
+    }
+  }).catch(() => { /* on garde les destinations par défaut */ });
+
   // ---------------- DESTINATION ----------------
   const destSelect = document.getElementById('destSelect');
-  DESTINATIONS.forEach((d,i) => {
-    const opt = document.createElement('option');
-    opt.value = i; opt.textContent = d.flag + " " + d.name;
-    destSelect.appendChild(opt);
-  });
+  function renderDestinationOptions(){
+    destSelect.innerHTML = '';
+    DESTINATIONS.forEach((d,i) => {
+      const opt = document.createElement('option');
+      opt.value = i; opt.textContent = d.flag + " " + d.name;
+      destSelect.appendChild(opt);
+    });
+  }
+  renderDestinationOptions();
   destSelect.addEventListener('change', () => { destIndex = Number(destSelect.value); updateDestinationUI(); });
   function updateDestinationUI(){
-    const d = DESTINATIONS[destIndex];
+    const d = DESTINATIONS[destIndex] || DESTINATIONS[0];
     document.getElementById('destFlagIcon').textContent = d.flag;
     document.getElementById('destNameLabel').textContent = d.name;
     document.getElementById('destDialCode').textContent = d.dial;
