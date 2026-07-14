@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Africa Vision · Configuration</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --navy-950:#0a1830; --navy-900:#0f2142; --navy-800:#16305c; --navy-700:#1e3f78;
+    --cream:#f6f1e6; --paper:#fffdf8; --gold:#c99a3c; --gold-light:#e6c876;
+    --ink:#0f1b2d; --slate:#5c6b83; --slate-light:#93a1b8; --line:#e7e1d2;
+    --red-flag:#c8342f; --yellow-flag:#f2b632; --green-flag:#1e7a46; --blue-status:#2b5fb0;
+    --error-bg:#fdecec; --error-text:#a32621; --info-bg:#eaf0fb; --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.01ms !important; transition-duration:.01ms !important;} }
+  html,body{margin:0; background:var(--cream); font-family:'Inter',system-ui,sans-serif; color:var(--ink);}
+  a{color:inherit; text-decoration:none;} button{font-family:inherit;}
+
+  header{position:sticky; top:0; z-index:20; background:var(--paper); border-bottom:1px solid var(--line);}
+  .flagbar{height:3px; background:linear-gradient(90deg, var(--red-flag) 0 33%, var(--yellow-flag) 33% 66%, var(--green-flag) 66% 100%);}
+  .headrow{display:flex; align-items:center; gap:12px; padding:13px 18px;}
+  .iconbtn{width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--navy-800); flex:none;}
+  .iconbtn:hover{background:var(--cream);}
+  .head-title{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15.5px;}
+  .head-sub{font-size:11.5px; color:var(--slate-light);}
+
+  .tabs{display:flex; gap:6px; padding:0 18px; max-width:680px; margin:0 auto; overflow-x:auto;}
+  .tab{
+    flex:none; padding:12px 14px; font-size:13.5px; font-weight:600; color:var(--slate); cursor:pointer;
+    border-bottom:3px solid transparent; white-space:nowrap;
+  }
+  .tab.active{color:var(--navy-900); border-bottom-color:var(--gold);}
+
+  main{max-width:680px; margin:0 auto; padding:20px 18px 50px;}
+  .panel{display:none;}
+  .panel.active{display:block; animation:fadeIn .2s ease both;}
+  @keyframes fadeIn{from{opacity:0;} to{opacity:1;}}
+
+  .section-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+  .section-head h2{font-family:'Space Grotesk',sans-serif; font-size:16px; margin:0;}
+  .add-btn{background:linear-gradient(160deg, var(--navy-700), var(--navy-900)); color:#fff; border:none; border-radius:9px; padding:8px 13px; font-weight:600; font-size:12.5px; cursor:pointer; display:flex; align-items:center; gap:6px;}
+
+  .info-banner{display:flex; gap:11px; background:var(--info-bg); border-radius:12px; padding:13px 15px; margin-bottom:18px; font-size:13px; color:var(--navy-800); line-height:1.45;}
+  .info-banner svg{flex:none; margin-top:1px;}
+
+  .card{background:var(--paper); border:1px solid var(--line); border-radius:13px; padding:16px; margin-bottom:16px;}
+  .rate-row{display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;}
+  .rate-label{font-size:12.5px; color:var(--slate); font-weight:600;}
+  .rate-value{font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700;}
+  .rate-edit{display:none; gap:8px; margin-top:12px;}
+  .rate-edit.show{display:flex;}
+  .rate-edit input{flex:1; border:1.5px solid var(--line); border-radius:9px; padding:10px; font-family:inherit; font-size:14px;}
+  .rate-edit button{border:none; border-radius:9px; padding:0 14px; background:var(--navy-900); color:#fff; font-weight:600; cursor:pointer;}
+  .rate-toggle{background:none; border:none; color:var(--navy-700); font-weight:600; font-size:12.5px; cursor:pointer; padding:0;}
+
+  .item-list{display:flex; flex-direction:column; gap:10px;}
+  .item-row{background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:13px 15px; display:flex; align-items:center; gap:12px;}
+  .item-emoji{font-size:20px; flex:none;}
+  .item-main{flex:1; min-width:0;}
+  .item-title{font-weight:700; font-size:14px;}
+  .item-sub{font-size:12px; color:var(--slate-light);}
+  .item-actions{display:flex; gap:6px; flex:none;}
+  .icon-sm{width:32px; height:32px; border-radius:8px; border:1px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--slate);}
+  .icon-sm:hover{background:var(--cream);}
+  .icon-sm.danger:hover{color:var(--red-flag); border-color:#f3c6c4;}
+
+  .role-pill{font-size:10.5px; font-weight:700; padding:4px 9px; border-radius:999px; flex:none;}
+  .role-pill.dga{background:#fdf2de; color:#a9780f;}
+  .role-pill.comptable{background:#e9f0fc; color:var(--blue-status);}
+  .role-pill.agent{background:#e8f6ee; color:var(--green-flag);}
+  .role-pill.autre{background:var(--cream); color:var(--slate);}
+  .status-dot{width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:5px;}
+  .status-dot.actif{background:var(--green-flag);}
+  .status-dot.inactif{background:var(--slate-light);}
+
+  .empty-state{text-align:center; padding:34px 18px; background:var(--paper); border:1px dashed var(--line); border-radius:14px; color:var(--slate); font-size:13.5px;}
+
+  /* MODAL */
+  .modal-overlay{position:fixed; inset:0; background:rgba(10,24,48,.5); z-index:50; display:none; align-items:flex-end; justify-content:center;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--paper); width:100%; max-width:480px; max-height:88vh; overflow-y:auto; border-radius:20px 20px 0 0; padding:22px 20px calc(22px + env(safe-area-inset-bottom)); animation:slideUp .22s ease both;}
+  @media (min-width:600px){ .modal-overlay{align-items:center;} .modal{border-radius:18px;} }
+  @keyframes slideUp{from{transform:translateY(24px); opacity:0;} to{transform:translateY(0); opacity:1;}}
+  .modal-head{display:flex; align-items:center; margin-bottom:16px;}
+  .modal-head .t{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px;}
+  .modal-close{margin-left:auto; background:var(--cream); border:none; width:32px; height:32px; border-radius:9px; cursor:pointer; color:var(--slate); display:flex; align-items:center; justify-content:center;}
+  .field{margin-bottom:14px;}
+  label{display:block; font-size:12.5px; font-weight:600; color:var(--slate); margin-bottom:6px;}
+  .input-shell{display:flex; align-items:center; border:1.5px solid #e3ddcd; border-radius:11px; background:#fff;}
+  .input-shell:focus-within{border-color:var(--navy-700); box-shadow:0 0 0 3px rgba(30,63,120,.12);}
+  input, select{width:100%; border:none; outline:none; background:transparent; padding:12px; font-size:14.5px; font-family:inherit; color:var(--ink);}
+  .btn{border:none; border-radius:11px; padding:13px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:14.5px; cursor:pointer; width:100%; background:linear-gradient(160deg, var(--navy-700), var(--navy-900)); color:#fff;}
+  .btn:disabled{opacity:.6;}
+  .alert{display:none; background:var(--error-bg); color:var(--error-text); border:1px solid #f3c6c4; border-radius:10px; padding:10px 12px; font-size:13px; margin-bottom:14px;}
+  .alert.show{display:block;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="flagbar"></div>
+  <div class="headrow">
+    <a class="iconbtn" href="dashboard.html" aria-label="Retour">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <div>
+      <div class="head-title">Configuration</div>
+      <div class="head-sub">Paramètres globaux de la plateforme</div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-tab="categories">Catégories</div>
+    <div class="tab" data-tab="routes">Routes & Tarifs</div>
+    <div class="tab" data-tab="users">Utilisateurs</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ ONGLET CATÉGORIES ============ -->
+  <section class="panel active" id="panel-categories">
+    <div class="section-head">
+      <h2>Catégories de produits</h2>
+      <button class="add-btn" id="addCatBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg> Ajouter</button>
+    </div>
+    <div class="info-banner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg>
+      <span>Le tarif au kg de chaque catégorie détermine automatiquement les frais d'expédition dans le formulaire "Nouveau Colis".</span>
+    </div>
+    <div class="item-list" id="catList"></div>
+  </section>
+
+  <!-- ============ ONGLET ROUTES & TARIFS ============ -->
+  <section class="panel" id="panel-routes">
+    <div class="card">
+      <div class="rate-row">
+        <div><div class="rate-label">Taux de change</div><div class="rate-value" id="rateDisplay">— GNF / USD</div></div>
+        <button class="rate-toggle" id="rateToggle">Modifier</button>
+      </div>
+      <div class="rate-edit" id="rateEdit">
+        <input type="number" id="rateInput" placeholder="Ex : 9345">
+        <button id="rateSave">Enregistrer</button>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <h2>Destinations</h2>
+      <button class="add-btn" id="addDestBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg> Ajouter</button>
+    </div>
+    <div class="info-banner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg>
+      <span>Ces destinations apparaissent dans le sélecteur de pays du formulaire "Nouveau Colis".</span>
+    </div>
+    <div class="item-list" id="destList"></div>
+  </section>
+
+  <!-- ============ ONGLET UTILISATEURS ============ -->
+  <section class="panel" id="panel-users">
+    <div class="section-head">
+      <h2>Équipe Africa Vision</h2>
+      <button class="add-btn" id="addUserBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg> Ajouter</button>
+    </div>
+    <div class="info-banner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg>
+      <span>Cette liste gère les rôles affichés dans l'app. Le compte de connexion (email + mot de passe) doit toujours être créé séparément dans Firebase Console → Authentication → Users.</span>
+    </div>
+    <div class="item-list" id="userList"></div>
+  </section>
+
+</main>
+
+<!-- MODAL CATÉGORIE -->
+<div class="modal-overlay" id="catOverlay">
+  <div class="modal">
+    <div class="modal-head"><span class="t" id="catModalTitle">Nouvelle catégorie</span>
+      <button class="modal-close" data-close="catOverlay"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="alert" id="catAlert"></div>
+    <div class="field"><label>Nom de la catégorie *</label><div class="input-shell"><input type="text" id="cat_nom" placeholder="Ex : Nourriture"></div></div>
+    <div class="field"><label>Tarif au kg (GNF) *</label><div class="input-shell"><input type="number" id="cat_tarif" min="0"></div></div>
+    <button class="btn" id="catSaveBtn">Enregistrer</button>
+  </div>
+</div>
+
+<!-- MODAL DESTINATION -->
+<div class="modal-overlay" id="destOverlay">
+  <div class="modal">
+    <div class="modal-head"><span class="t" id="destModalTitle">Nouvelle destination</span>
+      <button class="modal-close" data-close="destOverlay"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="alert" id="destAlert"></div>
+    <div class="field"><label>Nom du pays *</label><div class="input-shell"><input type="text" id="dest_nom" placeholder="Ex : ÉTATS-UNIS"></div></div>
+    <div class="field"><label>Indicatif téléphonique *</label><div class="input-shell"><input type="text" id="dest_dial" placeholder="Ex : +1"></div></div>
+    <div class="field"><label>Drapeau (emoji) *</label><div class="input-shell"><input type="text" id="dest_flag" placeholder="Ex : 🇺🇸"></div></div>
+    <button class="btn" id="destSaveBtn">Enregistrer</button>
+  </div>
+</div>
+
+<!-- MODAL UTILISATEUR -->
+<div class="modal-overlay" id="userOverlay">
+  <div class="modal">
+    <div class="modal-head"><span class="t" id="userModalTitle">Nouvel utilisateur</span>
+      <button class="modal-close" data-close="userOverlay"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="alert" id="userAlert"></div>
+    <div class="field"><label>Nom *</label><div class="input-shell"><input type="text" id="user_nom"></div></div>
+    <div class="field"><label>Prénom *</label><div class="input-shell"><input type="text" id="user_prenom"></div></div>
+    <div class="field"><label>Email *</label><div class="input-shell"><input type="email" id="user_email"></div></div>
+    <div class="field"><label>Rôle</label><div class="input-shell"><select id="user_role">
+      <option value="dga">DGA</option>
+      <option value="comptable">Comptable</option>
+      <option value="agent">Agent</option>
+      <option value="autre">Autre</option>
+    </select></div></div>
+    <div class="field"><label>Statut</label><div class="input-shell"><select id="user_statut">
+      <option value="actif">Actif</option>
+      <option value="inactif">Inactif</option>
+    </select></div></div>
+    <button class="btn" id="userSaveBtn">Enregistrer</button>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // CONFIGURATION FIREBASE — mêmes clés que sur les autres pages
+  // ============================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyDoWCBh3rschFm97Z5Y7ax1bamhadDS42Q",
+    authDomain: "africa-vision-3b38f.firebaseapp.com",
+    projectId: "africa-vision-3b38f",
+    storageBucket: "africa-vision-3b38f.firebasestorage.app",
+    messagingSenderId: "233363053035",
+    appId: "1:233363053035:web:6a5ef497fbf0991216e1ae"
+  };
+  const REQUIRE_AUTH = true;
+  const LOGIN_URL = "index.html";
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  const fmtGNF = n => new Intl.NumberFormat('fr-FR').format(Math.round(n||0)) + " GNF";
+
+  auth.onAuthStateChanged(user => {
+    if(user){ loadCategories(); loadDestinations(); loadRate(); loadUsers(); }
+    else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
+    else { loadCategories(); loadDestinations(); loadRate(); loadUsers(); }
+  });
+
+  // ---------------- TABS ----------------
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('.modal-close').forEach(btn => {
+    btn.addEventListener('click', () => document.getElementById(btn.dataset.close).classList.remove('show'));
+  });
+  document.querySelectorAll('.modal-overlay').forEach(ov => {
+    ov.addEventListener('click', e => { if(e.target === ov) ov.classList.remove('show'); });
+  });
+
+  // =====================================================================
+  // CATÉGORIES
+  // =====================================================================
+  let editingCatId = null;
+  function loadCategories(){
+    db.collection('categories').get().then(snap => {
+      const list = document.getElementById('catList');
+      if(snap.empty){
+        list.innerHTML = '<div class="empty-state">Aucune catégorie pour l\u2019instant. Le formulaire "Nouveau Colis" utilise 5 catégories par défaut tant que rien n\u2019est ajouté ici.</div>';
+        return;
+      }
+      list.innerHTML = '';
+      snap.forEach(doc => {
+        const c = doc.data();
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.innerHTML = `
+          <div class="item-emoji">📦</div>
+          <div class="item-main"><div class="item-title">${c.nom}</div><div class="item-sub">${fmtGNF(c.tarifKg)} / kg</div></div>
+          <div class="item-actions">
+            <button class="icon-sm" data-edit="${doc.id}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
+            <button class="icon-sm danger" data-del="${doc.id}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>`;
+        row.querySelector('[data-edit]').addEventListener('click', () => openCatModal(doc.id, c));
+        row.querySelector('[data-del]').addEventListener('click', () => deleteItem('categories', doc.id, loadCategories));
+        list.appendChild(row);
+      });
+    });
+  }
+  function openCatModal(id, data){
+    editingCatId = id || null;
+    document.getElementById('catModalTitle').textContent = id ? "Modifier la catégorie" : "Nouvelle catégorie";
+    document.getElementById('cat_nom').value = data ? data.nom : '';
+    document.getElementById('cat_tarif').value = data ? data.tarifKg : '';
+    document.getElementById('catAlert').classList.remove('show');
+    document.getElementById('catOverlay').classList.add('show');
+  }
+  document.getElementById('addCatBtn').addEventListener('click', () => openCatModal(null, null));
+  document.getElementById('catSaveBtn').addEventListener('click', async () => {
+    const nom = document.getElementById('cat_nom').value.trim();
+    const tarif = Number(document.getElementById('cat_tarif').value);
+    const alertBox = document.getElementById('catAlert');
+    if(!nom || !tarif || tarif <= 0){
+      alertBox.textContent = "Merci de renseigner un nom et un tarif supérieur à 0.";
+      alertBox.classList.add('show');
+      return;
+    }
+    const btn = document.getElementById('catSaveBtn');
+    btn.disabled = true;
+    try{
+      if(editingCatId){
+        await db.collection('categories').doc(editingCatId).update({nom, tarifKg: tarif});
+      }else{
+        await db.collection('categories').add({nom, tarifKg: tarif});
+      }
+      document.getElementById('catOverlay').classList.remove('show');
+      loadCategories();
+    }catch(err){
+      console.error(err);
+      alertBox.textContent = "Erreur d'enregistrement. Vérifie les règles Firestore.";
+      alertBox.classList.add('show');
+    }finally{ btn.disabled = false; }
+  });
+
+  // =====================================================================
+  // ROUTES & TARIFS (taux de change + destinations)
+  // =====================================================================
+  function loadRate(){
+    db.collection('config').doc('general').get().then(doc => {
+      const rate = doc.exists && doc.data().tauxChangeGNFUSD ? doc.data().tauxChangeGNFUSD : 9345;
+      document.getElementById('rateDisplay').textContent = fmtGNF(rate) + " / USD";
+      document.getElementById('rateInput').value = rate;
+    });
+  }
+  document.getElementById('rateToggle').addEventListener('click', () => {
+    document.getElementById('rateEdit').classList.toggle('show');
+  });
+  document.getElementById('rateSave').addEventListener('click', async () => {
+    const val = Number(document.getElementById('rateInput').value);
+    if(!val || val <= 0) return;
+    await db.collection('config').doc('general').set({tauxChangeGNFUSD: val}, {merge:true});
+    document.getElementById('rateEdit').classList.remove('show');
+    loadRate();
+  });
+
+  let editingDestId = null;
+  function loadDestinations(){
+    db.collection('destinations').get().then(snap => {
+      const list = document.getElementById('destList');
+      if(snap.empty){
+        list.innerHTML = '<div class="empty-state">Aucune destination personnalisée. Le formulaire "Nouveau Colis" utilise 8 destinations par défaut tant que rien n\u2019est ajouté ici.</div>';
+        return;
+      }
+      list.innerHTML = '';
+      snap.forEach(doc => {
+        const d = doc.data();
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.innerHTML = `
+          <div class="item-emoji">${d.flag||'🌍'}</div>
+          <div class="item-main"><div class="item-title">${d.nom}</div><div class="item-sub">Indicatif ${d.dial||'—'}</div></div>
+          <div class="item-actions">
+            <button class="icon-sm" data-edit="${doc.id}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
+            <button class="icon-sm danger" data-del="${doc.id}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>`;
+        row.querySelector('[data-edit]').addEventListener('click', () => openDestModal(doc.id, d));
+        row.querySelector('[data-del]').addEventListener('click', () => deleteItem('destinations', doc.id, loadDestinations));
+        list.appendChild(row);
+      });
+    });
+  }
+  function openDestModal(id, data){
+    editingDestId = id || null;
+    document.getElementById('destModalTitle').textContent = id ? "Modifier la destination" : "Nouvelle destination";
+    document.getElementById('dest_nom').value = data ? data.nom : '';
+    document.getElementById('dest_dial').value = data ? data.dial : '';
+    document.getElementById('dest_flag').value = data ? data.flag : '';
+    document.getElementById('destAlert').classList.remove('show');
+    document.getElementById('destOverlay').classList.add('show');
+  }
+  document.getElementById('addDestBtn').addEventListener('click', () => openDestModal(null, null));
+  document.getElementById('destSaveBtn').addEventListener('click', async () => {
+    const nom = document.getElementById('dest_nom').value.trim().toUpperCase();
+    const dial = document.getElementById('dest_dial').value.trim();
+    const flag = document.getElementById('dest_flag').value.trim();
+    const alertBox = document.getElementById('destAlert');
+    if(!nom || !dial || !flag){
+      alertBox.textContent = "Merci de remplir les 3 champs.";
+      alertBox.classList.add('show');
+      return;
+    }
+    const btn = document.getElementById('destSaveBtn');
+    btn.disabled = true;
+    try{
+      if(editingDestId){
+        await db.collection('destinations').doc(editingDestId).update({nom, dial, flag});
+      }else{
+        await db.collection('destinations').add({nom, dial, flag});
+      }
+      document.getElementById('destOverlay').classList.remove('show');
+      loadDestinations();
+    }catch(err){
+      console.error(err);
+      alertBox.textContent = "Erreur d'enregistrement. Vérifie les règles Firestore.";
+      alertBox.classList.add('show');
+    }finally{ btn.disabled = false; }
+  });
+
+  // =====================================================================
+  // UTILISATEURS
+  // =====================================================================
+  let editingUserId = null;
+  function loadUsers(){
+    db.collection('utilisateurs').get().then(snap => {
+      const list = document.getElementById('userList');
+      if(snap.empty){
+        list.innerHTML = '<div class="empty-state">Aucun membre ajouté pour l\u2019instant.</div>';
+        return;
+      }
+      list.innerHTML = '';
+      snap.forEach(doc => {
+        const u = doc.data();
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.innerHTML = `
+          <div class="item-main">
+            <div class="item-title">${u.prenom||''} ${u.nom||''}</div>
+            <div class="item-sub"><span class="status-dot ${u.statut||'actif'}"></span>${u.email||''}</div>
+          </div>
+          <span class="role-pill ${u.role||'autre'}">${(u.role||'autre').toUpperCase()}</span>
+          <div class="item-actions">
+            <button class="icon-sm" data-edit="${doc.id}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
+            <button class="icon-sm danger" data-del="${doc.id}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>`;
+        row.querySelector('[data-edit]').addEventListener('click', () => openUserModal(doc.id, u));
+        row.querySelector('[data-del]').addEventListener('click', () => deleteItem('utilisateurs', doc.id, loadUsers));
+        list.appendChild(row);
+      });
+    });
+  }
+  function openUserModal(id, data){
+    editingUserId = id || null;
+    document.getElementById('userModalTitle').textContent = id ? "Modifier l'utilisateur" : "Nouvel utilisateur";
+    document.getElementById('user_nom').value = data ? data.nom : '';
+    document.getElementById('user_prenom').value = data ? data.prenom : '';
+    document.getElementById('user_email').value = data ? data.email : '';
+    document.getElementById('user_role').value = data ? data.role : 'agent';
+    document.getElementById('user_statut').value = data ? data.statut : 'actif';
+    document.getElementById('userAlert').classList.remove('show');
+    document.getElementById('userOverlay').classList.add('show');
+  }
+  document.getElementById('addUserBtn').addEventListener('click', () => openUserModal(null, null));
+  document.getElementById('userSaveBtn').addEventListener('click', async () => {
+    const nom = document.getElementById('user_nom').value.trim();
+    const prenom = document.getElementById('user_prenom').value.trim();
+    const email = document.getElementById('user_email').value.trim();
+    const role = document.getElementById('user_role').value;
+    const statut = document.getElementById('user_statut').value;
+    const alertBox = document.getElementById('userAlert');
+    if(!nom || !prenom || !email){
+      alertBox.textContent = "Merci de renseigner le nom, le prénom et l'email.";
+      alertBox.classList.add('show');
+      return;
+    }
+    const btn = document.getElementById('userSaveBtn');
+    btn.disabled = true;
+    try{
+      if(editingUserId){
+        await db.collection('utilisateurs').doc(editingUserId).update({nom, prenom, email, role, statut});
+      }else{
+        await db.collection('utilisateurs').add({nom, prenom, email, role, statut, dateAjout: firebase.firestore.FieldValue.serverTimestamp()});
+      }
+      document.getElementById('userOverlay').classList.remove('show');
+      loadUsers();
+    }catch(err){
+      console.error(err);
+      alertBox.textContent = "Erreur d'enregistrement. Vérifie les règles Firestore.";
+      alertBox.classList.add('show');
+    }finally{ btn.disabled = false; }
+  });
+
+  // ---------------- SUPPRESSION GÉNÉRIQUE ----------------
+  function deleteItem(collection, id, reload){
+    if(!confirm("Supprimer cet élément ? Cette action est irréversible.")) return;
+    db.collection(collection).doc(id).delete().then(reload).catch(err => {
+      console.error(err);
+      alert("Impossible de supprimer. Vérifie les règles Firestore.");
+    });
+  }
+</script>
+
+</body>
+</html>
