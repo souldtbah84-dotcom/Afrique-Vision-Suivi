@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Africa Vision · Paiements</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --navy-950:#0a1830; --navy-900:#0f2142; --navy-800:#16305c; --navy-700:#1e3f78;
+    --cream:#f6f1e6; --paper:#fffdf8; --gold:#c99a3c; --gold-light:#e6c876;
+    --ink:#0f1b2d; --slate:#5c6b83; --slate-light:#93a1b8; --line:#e7e1d2;
+    --red-flag:#c8342f; --yellow-flag:#f2b632; --green-flag:#1e7a46; --blue-status:#2b5fb0;
+    --error-bg:#fdecec; --error-text:#a32621; --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.01ms !important; transition-duration:.01ms !important;} }
+  html,body{margin:0; background:var(--cream); font-family:'Inter',system-ui,sans-serif; color:var(--ink);}
+  a{color:inherit; text-decoration:none;} button{font-family:inherit;}
+
+  header{position:sticky; top:0; z-index:20; background:var(--paper); border-bottom:1px solid var(--line);}
+  .flagbar{height:3px; background:linear-gradient(90deg, var(--red-flag) 0 33%, var(--yellow-flag) 33% 66%, var(--green-flag) 66% 100%);}
+  .headrow{display:flex; align-items:center; gap:12px; padding:13px 18px;}
+  .iconbtn{width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--navy-800); flex:none;}
+  .iconbtn:hover{background:var(--cream);}
+  .head-title{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15.5px;}
+  .head-sub{font-size:11.5px; color:var(--slate-light);}
+
+  main{max-width:680px; margin:0 auto; padding:18px 18px 50px;}
+
+  .kpi-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;}
+  .kpi{position:relative; background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:13px 13px 12px 17px; overflow:hidden;}
+  .kpi::before{content:""; position:absolute; left:0; top:0; bottom:0; width:5px;}
+  .kpi.encaisse::before{background:var(--green-flag);}
+  .kpi.reste::before{background:var(--red-flag);}
+  .kpi.impaye::before{background:var(--yellow-flag);}
+  .kpi.total::before{background:var(--navy-800);}
+  .kpi-label{font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--slate); font-weight:600; margin-bottom:6px;}
+  .kpi-value{font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:700;}
+  .kpi-value.skeleton{width:60px; height:18px; border-radius:6px; background:linear-gradient(90deg,#eee,#f6f6f6,#eee); background-size:200% 100%; animation:shimmer 1.3s infinite;}
+  @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+
+  .toolbar{display:flex; flex-direction:column; gap:10px; margin-bottom:16px;}
+  .search-shell{display:flex; align-items:center; gap:9px; background:var(--paper); border:1.5px solid var(--line); border-radius:11px; padding:0 13px;}
+  .search-shell input{flex:1; border:none; outline:none; background:none; padding:12px 0; font-size:14px; font-family:inherit;}
+  .filter-row select{width:100%; border:1.5px solid var(--line); border-radius:10px; padding:10px 11px; font-size:13.5px; background:var(--paper); font-family:inherit; color:var(--ink);}
+
+  .list-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .list-head h2{font-family:'Space Grotesk',sans-serif; font-size:15px; margin:0;}
+  .list-head span{font-size:12.5px; color:var(--slate-light);}
+
+  .pay-list{display:flex; flex-direction:column; gap:10px;}
+  .pay-card{background:var(--paper); border:1px solid var(--line); border-radius:13px; padding:15px 16px; cursor:pointer;}
+  .pay-card:hover{border-color:var(--navy-700);}
+  .pc-top{display:flex; align-items:center; margin-bottom:9px;}
+  .pc-track{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14.5px; color:var(--navy-800);}
+  .pay-pill{margin-left:auto; font-size:11px; font-weight:700; padding:5px 10px; border-radius:999px;}
+  .pay-pill.paye{background:#e8f6ee; color:var(--green-flag);}
+  .pay-pill.partiel{background:#fdf2de; color:#a9780f;}
+  .pay-pill.impaye{background:#fdecec; color:var(--red-flag);}
+  .pc-dest{font-size:13.5px; font-weight:600; margin-bottom:9px;}
+  .pc-amounts{display:flex; justify-content:space-between; padding-top:9px; border-top:1px dashed var(--line); font-size:12.5px;}
+  .pc-amounts .m-label{color:var(--slate-light); display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em;}
+  .pc-amounts .m-val{font-weight:600;}
+  .pc-amounts .m-val.pos{color:var(--green-flag);}
+  .pc-amounts .m-val.neg{color:var(--red-flag);}
+
+  .empty-state, .error-state{text-align:center; padding:40px 20px; background:var(--paper); border:1px dashed var(--line); border-radius:14px; color:var(--slate);}
+  .error-state{border-color:#f3c6c4; background:var(--error-bg); color:var(--error-text); border-style:solid;}
+
+  /* MODAL */
+  .modal-overlay{position:fixed; inset:0; background:rgba(10,24,48,.5); z-index:50; display:none; align-items:flex-end; justify-content:center;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--paper); width:100%; max-width:520px; max-height:88vh; overflow-y:auto; border-radius:20px 20px 0 0; padding:22px 20px calc(22px + env(safe-area-inset-bottom)); animation:slideUp .22s ease both;}
+  @media (min-width:600px){ .modal-overlay{align-items:center;} .modal{border-radius:18px;} }
+  @keyframes slideUp{from{transform:translateY(24px); opacity:0;} to{transform:translateY(0); opacity:1;}}
+  .modal-head{display:flex; align-items:center; margin-bottom:16px;}
+  .modal-head .cc-track{font-size:18px; font-family:'Space Grotesk',sans-serif; font-weight:700; color:var(--navy-800);}
+  .modal-close{margin-left:auto; background:var(--cream); border:none; width:32px; height:32px; border-radius:9px; cursor:pointer; color:var(--slate); display:flex; align-items:center; justify-content:center;}
+  .modal-section{margin-bottom:18px;}
+  .modal-section h4{font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--slate-light); margin:0 0 8px;}
+  .amount-box{background:var(--cream); border-radius:12px; padding:14px 16px; display:flex; justify-content:space-between; margin-bottom:6px;}
+  .amount-box .lbl{font-size:12.5px; color:var(--slate);}
+  .amount-box .val{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px;}
+
+  .hist-item{display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .hist-item:last-child{border-bottom:none;}
+  .hist-item .m{font-weight:700;}
+  .hist-item .d{color:var(--slate-light); font-size:11.5px;}
+
+  .field{margin-bottom:14px;}
+  label{display:block; font-size:12.5px; font-weight:600; color:var(--slate); margin-bottom:6px;}
+  .input-shell{display:flex; align-items:center; border:1.5px solid #e3ddcd; border-radius:11px; background:#fff;}
+  .input-shell:focus-within{border-color:var(--navy-700); box-shadow:0 0 0 3px rgba(30,63,120,.12);}
+  input, select{width:100%; border:none; outline:none; background:transparent; padding:12px; font-size:14.5px; font-family:inherit; color:var(--ink);}
+  .btn{border:none; border-radius:11px; padding:13px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:14.5px; cursor:pointer; width:100%; background:linear-gradient(160deg, var(--navy-700), var(--navy-900)); color:#fff;}
+  .btn:disabled{opacity:.6;}
+  .alert{display:none; background:var(--error-bg); color:var(--error-text); border:1px solid #f3c6c4; border-radius:10px; padding:10px 12px; font-size:13px; margin-bottom:14px;}
+  .alert.show{display:block;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="flagbar"></div>
+  <div class="headrow">
+    <a class="iconbtn" href="dashboard.html" aria-label="Retour">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <div>
+      <div class="head-title">Paiements</div>
+      <div class="head-sub" id="headCount">Chargement…</div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <div class="kpi-grid">
+    <div class="kpi encaisse"><div class="kpi-label">Total encaissé</div><div class="kpi-value skeleton" id="kpiEncaisse"></div></div>
+    <div class="kpi reste"><div class="kpi-label">Reste à percevoir</div><div class="kpi-value skeleton" id="kpiReste"></div></div>
+    <div class="kpi impaye"><div class="kpi-label">Colis non soldés</div><div class="kpi-value skeleton" id="kpiImpaye"></div></div>
+    <div class="kpi total"><div class="kpi-label">Transactions</div><div class="kpi-value skeleton" id="kpiTransactions"></div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-shell">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m21 21-4.3-4.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <input type="text" id="searchInput" placeholder="Rechercher par numéro de suivi ou destinataire…">
+    </div>
+    <div class="filter-row">
+      <select id="statusFilter">
+        <option value="">Tous les statuts de paiement</option>
+        <option value="paye">Payé</option>
+        <option value="partiel">Partiel</option>
+        <option value="impaye">Non payé</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="list-head">
+    <h2>Colis</h2>
+    <span id="visibleCount"></span>
+  </div>
+
+  <div class="pay-list" id="payList"></div>
+
+</main>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="cc-track" id="modalTrack">—</span>
+      <button class="modal-close" id="modalClose" aria-label="Fermer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-section">
+      <div class="amount-box"><span class="lbl">Total à payer</span><span class="val" id="modalTotal">—</span></div>
+      <div class="amount-box"><span class="lbl">Déjà payé</span><span class="val" id="modalPaye" style="color:var(--green-flag);">—</span></div>
+      <div class="amount-box"><span class="lbl">Reste à payer</span><span class="val" id="modalReste" style="color:var(--red-flag);">—</span></div>
+    </div>
+
+    <div class="modal-section">
+      <h4>Enregistrer un paiement</h4>
+      <div class="alert" id="payAlert"></div>
+      <div class="field"><label>Montant (GNF) *</label><div class="input-shell"><input type="number" id="pay_montant" min="0"></div></div>
+      <div class="field"><label>Méthode</label><div class="input-shell"><select id="pay_methode">
+        <option value="Espèces">Espèces</option>
+        <option value="Orange Money">Orange Money</option>
+        <option value="Mobile Money">Mobile Money</option>
+        <option value="Virement bancaire">Virement bancaire</option>
+        <option value="Autre">Autre</option>
+      </select></div></div>
+      <div class="field"><label>Note (optionnel)</label><div class="input-shell"><input type="text" id="pay_note" placeholder="Ex : acompte, solde..."></div></div>
+      <button class="btn" id="paySaveBtn">Enregistrer le paiement</button>
+    </div>
+
+    <div class="modal-section">
+      <h4>Historique des transactions</h4>
+      <div id="modalHistory"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // CONFIGURATION FIREBASE — mêmes clés que sur les autres pages
+  // ============================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyDoWCBh3rschFm97Z5Y7ax1bamhadDS42Q",
+    authDomain: "africa-vision-3b38f.firebaseapp.com",
+    projectId: "africa-vision-3b38f",
+    storageBucket: "africa-vision-3b38f.firebasestorage.app",
+    messagingSenderId: "233363053035",
+    appId: "1:233363053035:web:6a5ef497fbf0991216e1ae"
+  };
+  const REQUIRE_AUTH = true;
+  const LOGIN_URL = "index.html";
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  const fmtGNF = n => new Intl.NumberFormat('fr-FR').format(Math.round(n||0)) + " GNF";
+  const fmtDate = ts => { if(!ts) return '—'; const d = ts.toDate ? ts.toDate() : new Date(ts); return d.toLocaleDateString('fr-FR'); };
+
+  let allColis = [];      // {id, data, montantPaye, resteAPayer, statutPaiement}
+  let allPaiements = [];  // {id, data}
+  let currentColisId = null;
+
+  auth.onAuthStateChanged(user => {
+    if(user){ window._currentUser = user; loadAll(); }
+    else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
+    else { loadAll(); }
+  });
+
+  function loadAll(){
+    Promise.all([
+      db.collection('colis').get(),
+      db.collection('paiements').get()
+    ]).then(([colisSnap, paySnap]) => {
+      allPaiements = paySnap.docs.map(d => ({id:d.id, data:d.data()}));
+      allColis = colisSnap.docs.map(d => {
+        const data = d.data();
+        const total = data.frais ? (data.frais.total||0) : 0;
+        const paye = allPaiements.filter(p => p.data.colisId === d.id).reduce((s,p) => s + (p.data.montant||0), 0);
+        const reste = Math.max(0, total - paye);
+        let statut = 'impaye';
+        if(paye > 0 && reste <= 0) statut = 'paye';
+        else if(paye > 0) statut = 'partiel';
+        return {id:d.id, data, total, paye, reste, statut};
+      });
+      renderKPIs();
+      applyFilters();
+    }).catch(err => {
+      console.error(err);
+      document.getElementById('payList').innerHTML = `
+        <div class="error-state">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          <p><strong>Impossible de charger les paiements.</strong></p>
+          <p>Vérifie la configuration Firebase et les règles Firestore.</p>
+        </div>`;
+      document.getElementById('headCount').textContent = "Erreur de chargement";
+    });
+  }
+
+  function renderKPIs(){
+    const encaisse = allPaiements.reduce((s,p) => s + (p.data.montant||0), 0);
+    const reste = allColis.reduce((s,c) => s + c.reste, 0);
+    const impaye = allColis.filter(c => c.statut !== 'paye').length;
+    document.getElementById('kpiEncaisse').textContent = fmtGNF(encaisse);
+    document.getElementById('kpiReste').textContent = fmtGNF(reste);
+    document.getElementById('kpiImpaye').textContent = impaye;
+    document.getElementById('kpiTransactions').textContent = allPaiements.length;
+    document.querySelectorAll('.kpi-value').forEach(el => el.classList.remove('skeleton'));
+    document.getElementById('headCount').textContent = allColis.length + " colis · " + allPaiements.length + " transaction(s)";
+  }
+
+  function applyFilters(){
+    const q = document.getElementById('searchInput').value.trim().toLowerCase();
+    const statusF = document.getElementById('statusFilter').value;
+    let list = allColis.filter(c => {
+      const dest = c.data.destinataire || {};
+      const matchesQ = !q || (c.data.numeroSuivi||'').toLowerCase().includes(q) || (dest.nom||'').toLowerCase().includes(q) || (dest.prenom||'').toLowerCase().includes(q);
+      const matchesStatus = !statusF || c.statut === statusF;
+      return matchesQ && matchesStatus;
+    });
+    renderList(list);
+  }
+  document.getElementById('searchInput').addEventListener('input', applyFilters);
+  document.getElementById('statusFilter').addEventListener('change', applyFilters);
+
+  const payLabel = s => ({paye:'Payé', partiel:'Partiel', impaye:'Non payé'}[s] || s);
+
+  function renderList(list){
+    const container = document.getElementById('payList');
+    document.getElementById('visibleCount').textContent = list.length + " affiché(s)";
+
+    if(list.length === 0){
+      container.innerHTML = `<div class="empty-state"><p><strong>Aucun colis ne correspond à ta recherche.</strong></p></div>`;
+      return;
+    }
+
+    container.innerHTML = '';
+    list.forEach(c => {
+      const dest = c.data.destinataire || {};
+      const card = document.createElement('div');
+      card.className = 'pay-card';
+      card.innerHTML = `
+        <div class="pc-top">
+          <span class="pc-track">${c.data.numeroSuivi || c.id}</span>
+          <span class="pay-pill ${c.statut}">${payLabel(c.statut)}</span>
+        </div>
+        <div class="pc-dest">${[dest.prenom, dest.nom].filter(Boolean).join(' ') || 'Destinataire non renseigné'}</div>
+        <div class="pc-amounts">
+          <div><span class="m-label">Total</span><span class="m-val">${fmtGNF(c.total)}</span></div>
+          <div><span class="m-label">Payé</span><span class="m-val pos">${fmtGNF(c.paye)}</span></div>
+          <div><span class="m-label">Reste</span><span class="m-val ${c.reste>0?'neg':''}">${fmtGNF(c.reste)}</span></div>
+        </div>
+      `;
+      card.addEventListener('click', () => openModal(c));
+      container.appendChild(card);
+    });
+  }
+
+  // ---------------- MODAL ----------------
+  const modalOverlay = document.getElementById('modalOverlay');
+  function openModal(c){
+    currentColisId = c.id;
+    document.getElementById('modalTrack').textContent = c.data.numeroSuivi || c.id;
+    document.getElementById('modalTotal').textContent = fmtGNF(c.total);
+    document.getElementById('modalPaye').textContent = fmtGNF(c.paye);
+    document.getElementById('modalReste').textContent = fmtGNF(c.reste);
+    document.getElementById('pay_montant').value = '';
+    document.getElementById('pay_note').value = '';
+    document.getElementById('payAlert').classList.remove('show');
+    renderHistory(c.id);
+    modalOverlay.classList.add('show');
+  }
+  document.getElementById('modalClose').addEventListener('click', () => modalOverlay.classList.remove('show'));
+  modalOverlay.addEventListener('click', e => { if(e.target === modalOverlay) modalOverlay.classList.remove('show'); });
+
+  function renderHistory(colisId){
+    const items = allPaiements.filter(p => p.data.colisId === colisId)
+      .sort((a,b) => {
+        const ta = a.data.date && a.data.date.toMillis ? a.data.date.toMillis() : 0;
+        const tb = b.data.date && b.data.date.toMillis ? b.data.date.toMillis() : 0;
+        return tb-ta;
+      });
+    const box = document.getElementById('modalHistory');
+    if(items.length === 0){
+      box.innerHTML = '<p style="color:var(--slate-light); font-size:13px;">Aucun paiement enregistré pour ce colis.</p>';
+      return;
+    }
+    box.innerHTML = items.map(p => `
+      <div class="hist-item">
+        <div><div class="m">${fmtGNF(p.data.montant)}</div><div class="d">${p.data.methode||''} ${p.data.notes?'· '+p.data.notes:''}</div></div>
+        <div class="d">${fmtDate(p.data.date)}</div>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('paySaveBtn').addEventListener('click', async () => {
+    const montant = Number(document.getElementById('pay_montant').value);
+    const methode = document.getElementById('pay_methode').value;
+    const notes = document.getElementById('pay_note').value.trim();
+    const alertBox = document.getElementById('payAlert');
+
+    if(!montant || montant <= 0){
+      alertBox.textContent = "Merci de saisir un montant supérieur à 0.";
+      alertBox.classList.add('show');
+      return;
+    }
+    const c = allColis.find(x => x.id === currentColisId);
+    if(montant > c.reste + 0.01){
+      alertBox.textContent = "Ce montant dépasse le reste à payer (" + fmtGNF(c.reste) + "). Vérifie avant d'enregistrer.";
+      alertBox.classList.add('show');
+      return;
+    }
+
+    const btn = document.getElementById('paySaveBtn');
+    btn.disabled = true; btn.textContent = "Enregistrement…";
+    try{
+      await db.collection('paiements').add({
+        colisId: currentColisId,
+        numeroSuivi: c.data.numeroSuivi || currentColisId,
+        montant, methode, notes,
+        date: firebase.firestore.FieldValue.serverTimestamp(),
+        creePar: window._currentUser ? window._currentUser.uid : null
+      });
+      modalOverlay.classList.remove('show');
+      loadAll();
+    }catch(err){
+      console.error(err);
+      alertBox.textContent = "Impossible d'enregistrer le paiement. Vérifie les règles Firestore.";
+      alertBox.classList.add('show');
+    }finally{
+      btn.disabled = false; btn.textContent = "Enregistrer le paiement";
+    }
+  });
+</script>
+
+</body>
+</html>
