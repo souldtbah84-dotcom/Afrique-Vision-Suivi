@@ -308,6 +308,27 @@
         </div>
         <div class="conv-flag-note">Montants en GNF (devise d'opération) — conversion USD affichée à titre indicatif</div>
       </div>
+
+      <div class="card">
+        <div class="field">
+          <label>Paiement à la création (optionnel)</label>
+          <div class="cat-hint" style="margin:-4px 0 12px;">Laisse à 0 si le client paiera plus tard — tu pourras enregistrer le paiement à tout moment depuis le reçu ou la page Paiements.</div>
+        </div>
+        <div class="field">
+          <label>Montant payé maintenant (GNF)</label>
+          <div class="input-shell"><input type="number" id="paiementInitial" value="0" min="0"></div>
+        </div>
+        <div class="field">
+          <label>Méthode de paiement</label>
+          <div class="input-shell"><select id="paiementMethode">
+            <option value="Espèces">Espèces</option>
+            <option value="Orange Money">Orange Money</option>
+            <option value="Mobile Money">Mobile Money</option>
+            <option value="Virement bancaire">Virement bancaire</option>
+            <option value="Autre">Autre</option>
+          </select></div>
+        </div>
+      </div>
     </section>
 
     <!-- STEP 5 : RESUME -->
@@ -350,6 +371,7 @@
     <p style="color:var(--slate); font-size:13.5px;">Numéro de suivi</p>
     <div class="success-track" id="successTrackNumber">EVD000000</div>
     <div class="success-actions">
+      <a class="btn btn-success" id="viewReceiptBtn" href="#" style="text-decoration:none;">🧾 Voir le reçu</a>
       <button class="btn btn-primary" id="createAnotherBtn">+ Créer un autre colis</button>
       <a class="btn btn-ghost" href="dashboard.html" style="text-decoration:none;">Retour au dashboard</a>
     </div>
@@ -710,6 +732,7 @@
       ${rabais>0 ? `<div class="prod-line"><span>Rabais</span><span>-${fmtGNF(rabais)}</span></div>` : ''}
       ${extraFees.map(f=>`<div class="prod-line"><span>${f.label||'Frais'}</span><span>${fmtGNF(f.montant)}</span></div>`).join('')}
       <div class="prod-line"><strong>Total à payer</strong><strong>${fmtGNF(total)} (${fmtUSD(total)})</strong></div>
+      ${Number(document.getElementById('paiementInitial').value)>0 ? `<div class="prod-line"><span>Payé à la création (${document.getElementById('paiementMethode').value})</span><span>${fmtGNF(Number(document.getElementById('paiementInitial').value))}</span></div>` : ''}
     `;
   }
 
@@ -781,12 +804,31 @@
     };
 
     try{
-      await db.collection('colis').add(payload);
+      const docRef = await db.collection('colis').add(payload);
       await Promise.all([
         upsertClient(payload.expediteur, 'expediteur'),
         upsertClient(payload.destinataire, 'destinataire')
       ]);
+
+      const paiementInitial = Number(document.getElementById('paiementInitial').value)||0;
+      if(paiementInitial > 0){
+        try{
+          await db.collection('paiements').add({
+            colisId: docRef.id,
+            numeroSuivi: trackingNumber,
+            montant: paiementInitial,
+            methode: document.getElementById('paiementMethode').value,
+            notes: "Paiement à la création",
+            date: firebase.firestore.FieldValue.serverTimestamp(),
+            creePar: window._currentUser ? window._currentUser.uid : null
+          });
+        }catch(err){
+          console.warn("Colis créé mais le paiement initial n'a pas pu être enregistré :", err);
+        }
+      }
+
       document.getElementById('successTrackNumber').textContent = trackingNumber;
+      document.getElementById('viewReceiptBtn').href = "recu.html?id=" + docRef.id;
       document.getElementById('wizardWrap').style.display = 'none';
       document.getElementById('navBar').style.display = 'none';
       document.getElementById('successScreen').classList.add('show');
