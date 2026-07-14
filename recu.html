@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Africa Vision · Reçu</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --navy-950:#0a1830; --navy-900:#0f2142; --navy-800:#16305c; --navy-700:#1e3f78;
+    --cream:#f6f1e6; --paper:#fffdf8; --gold:#c99a3c; --gold-light:#e6c876;
+    --ink:#0f1b2d; --slate:#5c6b83; --slate-light:#93a1b8; --line:#e7e1d2;
+    --red-flag:#c8342f; --yellow-flag:#f2b632; --green-flag:#1e7a46; --blue-status:#2b5fb0;
+    --error-bg:#fdecec; --error-text:#a32621; --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.01ms !important; transition-duration:.01ms !important;} }
+  html,body{margin:0; background:var(--cream); font-family:'Inter',system-ui,sans-serif; color:var(--ink);}
+  a{color:inherit; text-decoration:none;} button{font-family:inherit;}
+
+  header{position:sticky; top:0; z-index:20; background:var(--paper); border-bottom:1px solid var(--line);}
+  .flagbar{height:3px; background:linear-gradient(90deg, var(--red-flag) 0 33%, var(--yellow-flag) 33% 66%, var(--green-flag) 66% 100%);}
+  .headrow{display:flex; align-items:center; gap:12px; padding:13px 18px;}
+  .iconbtn{width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--navy-800); flex:none;}
+  .iconbtn:hover{background:var(--cream);}
+  .head-title{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15.5px;}
+  .head-sub{font-size:11.5px; color:var(--slate-light);}
+  .head-actions{margin-left:auto; display:flex; gap:8px;}
+
+  main{max-width:560px; margin:0 auto; padding:22px 18px 60px;}
+
+  .receipt{background:var(--paper); border-radius:var(--radius); overflow:hidden; box-shadow:0 20px 40px -20px rgba(4,10,25,.35);}
+  .r-stub{background:linear-gradient(160deg, var(--navy-900), var(--navy-800) 70%); color:var(--cream); padding:26px 24px 20px; position:relative;}
+  .r-stub::after{content:""; position:absolute; left:0; right:0; bottom:-1px; height:14px; background:radial-gradient(circle at 10px 0, transparent 9px, var(--paper) 9.5px) 0 -7px / 24px 14px repeat-x;}
+  .flagbar-sm{height:3px; width:52px; border-radius:2px; margin-bottom:14px; background:linear-gradient(90deg, var(--red-flag) 0 33%, var(--yellow-flag) 33% 66%, var(--green-flag) 66% 100%);}
+  .r-brand{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .r-mark{width:36px; height:36px; border-radius:9px; background:linear-gradient(145deg, var(--gold-light), var(--gold)); display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:13px; color:var(--navy-950);}
+  .r-brand-name{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px;}
+  .r-brand-sub{font-size:10.5px; color:#b9c6de; letter-spacing:.1em; text-transform:uppercase;}
+  .r-track-label{font-size:11px; color:#b9c6de; text-transform:uppercase; letter-spacing:.1em; margin-bottom:4px;}
+  .r-track{font-family:'Space Grotesk',sans-serif; font-size:26px; font-weight:700;}
+  .r-status{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:5px 11px; border-radius:999px; margin-top:10px;}
+  .r-status.en_attente{background:#fdf2de; color:#a9780f;}
+  .r-status.en_transit{background:#e9f0fc; color:var(--blue-status);}
+  .r-status.livre{background:#e8f6ee; color:var(--green-flag);}
+
+  .r-body{padding:22px 24px;}
+  .r-section{margin-bottom:20px;}
+  .r-section h4{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--slate-light); margin:0 0 9px;}
+  .r-route{display:flex; align-items:center; justify-content:center; gap:12px; background:var(--cream); border-radius:10px; padding:10px; font-size:13.5px; font-weight:600; margin-bottom:18px;}
+  .r-two-col{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .r-person .name{font-weight:700; font-size:14px; margin-bottom:3px;}
+  .r-person .line{font-size:12.5px; color:var(--slate); margin-bottom:2px;}
+  .r-line{display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
+  .r-line:last-child{border-bottom:none;}
+  .r-line span:first-child{color:var(--slate);}
+  .r-total-box{background:var(--navy-900); color:#fff; border-radius:12px; padding:16px; display:flex; justify-content:space-between; align-items:center; margin-top:10px;}
+  .r-total-box .lbl{font-size:12.5px; color:#b9c6de;}
+  .r-total-box .val{font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700;}
+
+  .pay-summary{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px;}
+  .pay-box{background:var(--cream); border-radius:10px; padding:11px; text-align:center;}
+  .pay-box .l{font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--slate-light); margin-bottom:4px;}
+  .pay-box .v{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:13.5px;}
+  .pay-box.green .v{color:var(--green-flag);}
+  .pay-box.red .v{color:var(--red-flag);}
+
+  .r-footer{text-align:center; font-size:11px; color:var(--slate-light); padding:16px 24px 22px; border-top:1px dashed var(--line);}
+
+  .actions-bar{display:flex; gap:10px; margin-top:18px;}
+  .btn{border:none; border-radius:11px; padding:13px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13.5px; cursor:pointer; flex:1; display:flex; align-items:center; justify-content:center; gap:7px;}
+  .btn-primary{background:linear-gradient(160deg, var(--navy-700), var(--navy-900)); color:#fff;}
+  .btn-wa{background:#25D366; color:#fff;}
+
+  .pay-form-card{background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:18px; margin-top:18px;}
+  .pay-form-card h4{font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--slate-light); margin:0 0 12px;}
+  .field{margin-bottom:12px;}
+  label{display:block; font-size:12px; font-weight:600; color:var(--slate); margin-bottom:5px;}
+  .input-shell{display:flex; align-items:center; border:1.5px solid #e3ddcd; border-radius:10px; background:#fff;}
+  input, select{width:100%; border:none; outline:none; background:transparent; padding:11px; font-size:14px; font-family:inherit; color:var(--ink);}
+  .btn-save{width:100%; background:linear-gradient(160deg, var(--green-flag), #1c6b3e); color:#fff;}
+  .alert{display:none; background:var(--error-bg); color:var(--error-text); border:1px solid #f3c6c4; border-radius:10px; padding:9px 11px; font-size:12.5px; margin-bottom:12px;}
+  .alert.show{display:block;}
+
+  .loading-state, .error-state{text-align:center; padding:60px 20px; color:var(--slate);}
+
+  @media print{
+    header, .actions-bar, .pay-form-card{display:none !important;}
+    body{background:#fff;}
+    main{padding:0; max-width:100%;}
+    .receipt{box-shadow:none; border:1px solid #ddd;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="flagbar"></div>
+  <div class="headrow">
+    <a class="iconbtn" href="colis.html" aria-label="Retour">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <div>
+      <div class="head-title">Reçu</div>
+      <div class="head-sub">Détails et paiement du colis</div>
+    </div>
+  </div>
+</header>
+
+<main id="mainContent">
+  <div class="loading-state" id="loadingState">Chargement du reçu…</div>
+</main>
+
+<script>
+  // ============================================================
+  // CONFIGURATION FIREBASE — mêmes clés que sur les autres pages
+  // ============================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyDoWCBh3rschFm97Z5Y7ax1bamhadDS42Q",
+    authDomain: "africa-vision-3b38f.firebaseapp.com",
+    projectId: "africa-vision-3b38f",
+    storageBucket: "africa-vision-3b38f.firebasestorage.app",
+    messagingSenderId: "233363053035",
+    appId: "1:233363053035:web:6a5ef497fbf0991216e1ae"
+  };
+  const REQUIRE_AUTH = true;
+  const LOGIN_URL = "index.html";
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  const fmtGNF = n => new Intl.NumberFormat('fr-FR').format(Math.round(n||0)) + " GNF";
+  const fmtDate = ts => { if(!ts) return '—'; const d = ts.toDate ? ts.toDate() : new Date(ts); return d.toLocaleDateString('fr-FR'); };
+  const statusLabel = c => ({en_attente:'En attente', en_transit:'En transit', livre:'Livré'}[c] || c);
+
+  const colisId = new URLSearchParams(window.location.search).get('id');
+
+  auth.onAuthStateChanged(user => {
+    if(user){ window._currentUser = user; init(); }
+    else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
+    else { init(); }
+  });
+
+  let colisData = null;
+  let paiements = [];
+
+  async function init(){
+    if(!colisId){
+      document.getElementById('mainContent').innerHTML = '<div class="error-state">Aucun colis spécifié. Ouvre ce reçu depuis la liste des colis ou l\u2019écran de confirmation.</div>';
+      return;
+    }
+    try{
+      const [colisDoc, paySnap] = await Promise.all([
+        db.collection('colis').doc(colisId).get(),
+        db.collection('paiements').where('colisId', '==', colisId).get()
+      ]);
+      if(!colisDoc.exists){
+        document.getElementById('mainContent').innerHTML = '<div class="error-state">Ce colis est introuvable.</div>';
+        return;
+      }
+      colisData = colisDoc.data();
+      paiements = paySnap.docs.map(d => d.data()).sort((a,b) => {
+        const ta = a.date && a.date.toMillis ? a.date.toMillis() : 0;
+        const tb = b.date && b.date.toMillis ? b.date.toMillis() : 0;
+        return tb-ta;
+      });
+      render();
+    }catch(err){
+      console.error(err);
+      document.getElementById('mainContent').innerHTML = '<div class="error-state">Impossible de charger le reçu. Vérifie la configuration Firebase.</div>';
+    }
+  }
+
+  function render(){
+    const c = colisData;
+    const exp = c.expediteur || {};
+    const dest = c.destinataire || {};
+    const route = c.route || {};
+    const frais = c.frais || {};
+    const total = frais.total || 0;
+    const paye = paiements.reduce((s,p) => s + (p.montant||0), 0);
+    const reste = Math.max(0, total - paye);
+    const statut = c.statut || 'en_attente';
+
+    document.getElementById('mainContent').innerHTML = `
+      <div class="receipt">
+        <div class="r-stub">
+          <div class="flagbar-sm"></div>
+          <div class="r-brand">
+            <div class="r-mark">AV</div>
+            <div><div class="r-brand-name">Africa Vision</div><div class="r-brand-sub">Reçu d'expédition</div></div>
+          </div>
+          <div class="r-track-label">Numéro de suivi</div>
+          <div class="r-track">${c.numeroSuivi || colisId}</div>
+          <span class="r-status ${statut}">${statusLabel(statut)}</span>
+        </div>
+
+        <div class="r-body">
+          <div class="r-route">🇬🇳 ${route.depart||'GUINEE'} → ${route.arrivee||'—'}</div>
+
+          <div class="r-section">
+            <div class="r-two-col">
+              <div class="r-person">
+                <h4>Expéditeur</h4>
+                <div class="name">${[exp.prenom, exp.nom].filter(Boolean).join(' ')||'—'}</div>
+                <div class="line">${exp.telephone||''}</div>
+                <div class="line">${exp.adresse||''}</div>
+              </div>
+              <div class="r-person">
+                <h4>Destinataire</h4>
+                <div class="name">${[dest.prenom, dest.nom].filter(Boolean).join(' ')||'—'}</div>
+                <div class="line">${dest.telephone||''}</div>
+                <div class="line">${dest.adresse||''}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="r-section">
+            <h4>Produits</h4>
+            ${(c.produits||[]).map(p => `<div class="r-line"><span>x${p.quantite} ${p.nom}</span><span>${(p.quantite*p.poidsUnitaire).toFixed(1)} kg</span></div>`).join('')}
+            <div class="r-line"><span>Poids total</span><span><strong>${(c.poidsTotal||0).toFixed(1)} kg</strong></span></div>
+          </div>
+
+          <div class="r-section">
+            <h4>Frais d'expédition</h4>
+            <div class="r-line"><span>Frais de base</span><span>${fmtGNF(frais.fraisBase)}</span></div>
+            ${frais.rabais>0 ? `<div class="r-line"><span>Rabais</span><span>-${fmtGNF(frais.rabais)}</span></div>` : ''}
+            ${(frais.extras||[]).map(f => `<div class="r-line"><span>${f.label||'Frais'}</span><span>${fmtGNF(f.montant)}</span></div>`).join('')}
+            <div class="r-total-box"><span class="lbl">Total à payer</span><span class="val">${fmtGNF(total)}</span></div>
+          </div>
+
+          <div class="r-section">
+            <h4>Paiement</h4>
+            <div class="pay-summary">
+              <div class="pay-box"><div class="l">Total</div><div class="v">${fmtGNF(total)}</div></div>
+              <div class="pay-box green"><div class="l">Payé</div><div class="v">${fmtGNF(paye)}</div></div>
+              <div class="pay-box red"><div class="l">Reste</div><div class="v">${fmtGNF(reste)}</div></div>
+            </div>
+            ${paiements.length ? paiements.map(p => `<div class="r-line"><span>${p.methode||'Paiement'} · ${fmtDate(p.date)}</span><span>${fmtGNF(p.montant)}</span></div>`).join('') : '<div class="r-line"><span>Aucun paiement enregistré</span></div>'}
+          </div>
+        </div>
+
+        <div class="r-footer">Africa Vision Multiservices · Conakry, Guinée · Merci de votre confiance</div>
+      </div>
+
+      <div class="actions-bar">
+        <button class="btn btn-primary" id="printBtn">🖨️ Imprimer</button>
+        <button class="btn btn-wa" id="waBtn">📤 WhatsApp</button>
+      </div>
+
+      ${reste > 0 ? `
+      <div class="pay-form-card">
+        <h4>Enregistrer un paiement</h4>
+        <div class="alert" id="payAlert"></div>
+        <div class="field"><label>Montant (GNF) *</label><div class="input-shell"><input type="number" id="pay_montant" min="0" max="${reste}"></div></div>
+        <div class="field"><label>Méthode</label><div class="input-shell"><select id="pay_methode">
+          <option value="Espèces">Espèces</option>
+          <option value="Orange Money">Orange Money</option>
+          <option value="Mobile Money">Mobile Money</option>
+          <option value="Virement bancaire">Virement bancaire</option>
+          <option value="Autre">Autre</option>
+        </select></div></div>
+        <button class="btn-save btn" id="paySaveBtn">Enregistrer le paiement</button>
+      </div>` : ''}
+    `;
+
+    document.getElementById('printBtn').addEventListener('click', () => window.print());
+    document.getElementById('waBtn').addEventListener('click', () => {
+      const msg = `Reçu Africa Vision\nColis : ${c.numeroSuivi||colisId}\nDestinataire : ${[dest.prenom,dest.nom].filter(Boolean).join(' ')}\nTotal : ${fmtGNF(total)}\nPayé : ${fmtGNF(paye)}\nReste : ${fmtGNF(reste)}`;
+      window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
+    });
+
+    const saveBtn = document.getElementById('paySaveBtn');
+    if(saveBtn){
+      saveBtn.addEventListener('click', async () => {
+        const montant = Number(document.getElementById('pay_montant').value);
+        const methode = document.getElementById('pay_methode').value;
+        const alertBox = document.getElementById('payAlert');
+        if(!montant || montant <= 0){
+          alertBox.textContent = "Merci de saisir un montant supérieur à 0.";
+          alertBox.classList.add('show');
+          return;
+        }
+        if(montant > reste + 0.01){
+          alertBox.textContent = "Ce montant dépasse le reste à payer (" + fmtGNF(reste) + ").";
+          alertBox.classList.add('show');
+          return;
+        }
+        saveBtn.disabled = true; saveBtn.textContent = "Enregistrement…";
+        try{
+          await db.collection('paiements').add({
+            colisId, numeroSuivi: c.numeroSuivi || colisId,
+            montant, methode, notes: "",
+            date: firebase.firestore.FieldValue.serverTimestamp(),
+            creePar: window._currentUser ? window._currentUser.uid : null
+          });
+          const paySnap = await db.collection('paiements').where('colisId', '==', colisId).get();
+          paiements = paySnap.docs.map(d => d.data());
+          render();
+        }catch(err){
+          console.error(err);
+          alertBox.textContent = "Impossible d'enregistrer. Vérifie les règles Firestore.";
+          alertBox.classList.add('show');
+          saveBtn.disabled = false; saveBtn.textContent = "Enregistrer le paiement";
+        }
+      });
+    }
+  }
+</script>
+
+</body>
+</html>
