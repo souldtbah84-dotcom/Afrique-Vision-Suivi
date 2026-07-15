@@ -186,8 +186,33 @@
   let waitingColis = [];
   let selectedColisIds = new Set();
 
-  auth.onAuthStateChanged(user => {
-    if(user){ window._currentUser = user; loadBordereaux(); loadWaitingColis(); }
+  async function checkModuleAccess(moduleKey){
+    try{
+      const snap = await db.collection('utilisateurs').where('email', '==', auth.currentUser.email).limit(1).get();
+      if(snap.empty) return true;
+      const u = snap.docs[0].data();
+      if(u.role === 'dga') return true;
+      if(u.statut === 'inactif') return false;
+      if(!u.permissions) return true;
+      return u.permissions[moduleKey] !== false;
+    }catch(e){
+      console.warn("Vérification des permissions impossible, accès autorisé par défaut", e);
+      return true;
+    }
+  }
+
+  auth.onAuthStateChanged(async user => {
+    if(user){
+      const allowed = await checkModuleAccess('bordereaux');
+      if(!allowed){
+        alert("Tu n'as pas la permission d'accéder au module Bordereaux.");
+        window.location.href = "dashboard.html";
+        return;
+      }
+      window._currentUser = user;
+      loadBordereaux();
+      loadWaitingColis();
+    }
     else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
     else { loadBordereaux(); loadWaitingColis(); }
   });
