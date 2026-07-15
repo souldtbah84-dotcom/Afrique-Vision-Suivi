@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Africa Vision · Factures Commerciales</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --navy-950:#0a1830; --navy-900:#0f2142; --navy-800:#16305c; --navy-700:#1e3f78;
+    --cream:#f6f1e6; --paper:#fffdf8; --gold:#c99a3c; --gold-light:#e6c876;
+    --ink:#0f1b2d; --slate:#5c6b83; --slate-light:#93a1b8; --line:#e7e1d2;
+    --red-flag:#c8342f; --yellow-flag:#f2b632; --green-flag:#1e7a46; --blue-status:#2b5fb0;
+    --error-bg:#fdecec; --error-text:#a32621; --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.01ms !important; transition-duration:.01ms !important;} }
+  html,body{margin:0; background:var(--cream); font-family:'Inter',system-ui,sans-serif; color:var(--ink);}
+  a{color:inherit; text-decoration:none;} button{font-family:inherit;}
+
+  header{position:sticky; top:0; z-index:20; background:var(--paper); border-bottom:1px solid var(--line);}
+  .flagbar{height:3px; background:linear-gradient(90deg, var(--red-flag) 0 33%, var(--yellow-flag) 33% 66%, var(--green-flag) 66% 100%);}
+  .headrow{display:flex; align-items:center; gap:12px; padding:13px 18px;}
+  .iconbtn{width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--navy-800); flex:none;}
+  .iconbtn:hover{background:var(--cream);}
+  .head-title{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15.5px;}
+  .head-sub{font-size:11.5px; color:var(--slate-light);}
+
+  main{max-width:680px; margin:0 auto; padding:18px 18px 50px;}
+
+  .kpi-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px;}
+  .kpi{position:relative; background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:13px 12px 12px 15px; overflow:hidden;}
+  .kpi::before{content:""; position:absolute; left:0; top:0; bottom:0; width:5px;}
+  .kpi.total::before{background:var(--navy-800);}
+  .kpi.valeur::before{background:var(--gold);}
+  .kpi.mois::before{background:var(--green-flag);}
+  .kpi-label{font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--slate); font-weight:600; margin-bottom:6px;}
+  .kpi-value{font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700;}
+  .kpi-value.skeleton{width:50px; height:17px; border-radius:6px; background:linear-gradient(90deg,#eee,#f6f6f6,#eee); background-size:200% 100%; animation:shimmer 1.3s infinite;}
+  @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+
+  .search-shell{display:flex; align-items:center; gap:9px; background:var(--paper); border:1.5px solid var(--line); border-radius:11px; padding:0 13px; margin-bottom:16px;}
+  .search-shell input{flex:1; border:none; outline:none; background:none; padding:12px 0; font-size:14px; font-family:inherit;}
+
+  .list-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .list-head h2{font-family:'Space Grotesk',sans-serif; font-size:15px; margin:0;}
+  .list-head span{font-size:12.5px; color:var(--slate-light);}
+
+  .f-list{display:flex; flex-direction:column; gap:10px;}
+  .f-card{background:var(--paper); border:1px solid var(--line); border-radius:13px; padding:15px 16px; display:flex; align-items:center; gap:13px;}
+  .f-icon{width:40px; height:40px; border-radius:10px; background:var(--cream); color:var(--navy-800); display:flex; align-items:center; justify-content:center; flex:none;}
+  .f-main{flex:1; min-width:0;}
+  .f-track{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14px;}
+  .f-sub{font-size:12px; color:var(--slate-light);}
+  .f-num{font-size:11px; color:var(--gold); font-weight:700; margin-top:2px;}
+  .f-action{flex:none; background:linear-gradient(160deg, var(--navy-700), var(--navy-900)); color:#fff; border:none; border-radius:9px; padding:9px 13px; font-weight:600; font-size:12.5px; white-space:nowrap;}
+  .f-action.generated{background:var(--cream); color:var(--navy-800); border:1px solid var(--line);}
+
+  .empty-state, .error-state{text-align:center; padding:40px 20px; background:var(--paper); border:1px dashed var(--line); border-radius:14px; color:var(--slate);}
+  .error-state{border-color:#f3c6c4; background:var(--error-bg); color:var(--error-text); border-style:solid;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="flagbar"></div>
+  <div class="headrow">
+    <a class="iconbtn" href="dashboard.html" aria-label="Retour">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <div>
+      <div class="head-title">Factures Commerciales</div>
+      <div class="head-sub" id="headCount">Chargement…</div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <div class="kpi-grid">
+    <div class="kpi total"><div class="kpi-label">Factures émises</div><div class="kpi-value skeleton" id="kpiTotal"></div></div>
+    <div class="kpi valeur"><div class="kpi-label">Valeur déclarée</div><div class="kpi-value skeleton" id="kpiValeur"></div></div>
+    <div class="kpi mois"><div class="kpi-label">Ce mois-ci</div><div class="kpi-value skeleton" id="kpiMois"></div></div>
+  </div>
+
+  <div class="search-shell">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m21 21-4.3-4.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <input type="text" id="searchInput" placeholder="Rechercher par numéro de suivi ou destinataire…">
+  </div>
+
+  <div class="list-head">
+    <h2>Colis</h2>
+    <span id="visibleCount"></span>
+  </div>
+
+  <div class="f-list" id="fList"></div>
+
+</main>
+
+<script>
+  // ============================================================
+  // CONFIGURATION FIREBASE — mêmes clés que sur les autres pages
+  // ============================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyDoWCBh3rschFm97Z5Y7ax1bamhadDS42Q",
+    authDomain: "africa-vision-3b38f.firebaseapp.com",
+    projectId: "africa-vision-3b38f",
+    storageBucket: "africa-vision-3b38f.firebasestorage.app",
+    messagingSenderId: "233363053035",
+    appId: "1:233363053035:web:6a5ef497fbf0991216e1ae"
+  };
+  const REQUIRE_AUTH = true;
+  const LOGIN_URL = "index.html";
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  const fmtGNF = n => new Intl.NumberFormat('fr-FR').format(Math.round(n||0)) + " GNF";
+
+  let allColis = [];
+
+  auth.onAuthStateChanged(user => {
+    if(user){ loadColis(); }
+    else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
+    else { loadColis(); }
+  });
+
+  function loadColis(){
+    db.collection('colis').get().then(snap => {
+      allColis = snap.docs.map(d => ({id:d.id, data:d.data()}));
+      renderKPIs();
+      applyFilter();
+    }).catch(err => {
+      console.error(err);
+      document.getElementById('fList').innerHTML = `
+        <div class="error-state">
+          <p><strong>Impossible de charger les colis.</strong></p>
+          <p>Vérifie la configuration Firebase et les règles Firestore.</p>
+        </div>`;
+      document.getElementById('headCount').textContent = "Erreur de chargement";
+    });
+  }
+
+  function renderKPIs(){
+    const withFacture = allColis.filter(c => c.data.numeroFacture);
+    const valeurTotale = withFacture.reduce((s,c) => s + (c.data.valeurTotal||0), 0);
+    const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0,0,0,0);
+    const ceMois = withFacture.filter(c => {
+      const t = c.data.dateEmissionFacture && c.data.dateEmissionFacture.toMillis ? c.data.dateEmissionFacture.toMillis() : 0;
+      return t >= startOfMonth.getTime();
+    }).length;
+
+    document.getElementById('kpiTotal').textContent = withFacture.length;
+    document.getElementById('kpiValeur').textContent = fmtGNF(valeurTotale);
+    document.getElementById('kpiMois').textContent = ceMois;
+    document.querySelectorAll('.kpi-value').forEach(el => el.classList.remove('skeleton'));
+    document.getElementById('headCount').textContent = allColis.length + " colis · " + withFacture.length + " facture(s) émise(s)";
+  }
+
+  function applyFilter(){
+    const q = document.getElementById('searchInput').value.trim().toLowerCase();
+    const list = allColis.filter(c => {
+      const dest = c.data.destinataire || {};
+      return !q || (c.data.numeroSuivi||'').toLowerCase().includes(q) || (dest.nom||'').toLowerCase().includes(q) || (dest.prenom||'').toLowerCase().includes(q);
+    });
+    renderList(list);
+  }
+  document.getElementById('searchInput').addEventListener('input', applyFilter);
+
+  function renderList(list){
+    const container = document.getElementById('fList');
+    document.getElementById('visibleCount').textContent = list.length + " affiché(s)";
+
+    if(list.length === 0){
+      container.innerHTML = '<div class="empty-state"><p><strong>Aucun colis trouvé.</strong></p></div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    list.forEach(({id, data}) => {
+      const dest = data.destinataire || {};
+      const hasFacture = !!data.numeroFacture;
+      const row = document.createElement('div');
+      row.className = 'f-card';
+      row.innerHTML = `
+        <div class="f-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M7 3h8l4 4v14H7z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 12h5M10 16h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+        <div class="f-main">
+          <div class="f-track">${data.numeroSuivi || id}</div>
+          <div class="f-sub">${[dest.prenom, dest.nom].filter(Boolean).join(' ') || 'Destinataire non renseigné'} · ${fmtGNF(data.valeurTotal)}</div>
+          ${hasFacture ? `<div class="f-num">${data.numeroFacture}</div>` : ''}
+        </div>
+        <a class="f-action ${hasFacture?'generated':''}" href="facture.html?id=${id}">${hasFacture ? 'Voir' : 'Générer'}</a>
+      `;
+      container.appendChild(row);
+    });
+  }
+</script>
+
+</body>
+</html>
