@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Africa Vision · Bordereau</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --navy-950:#0a1830; --navy-900:#0f2142; --navy-800:#16305c; --navy-700:#1e3f78;
+    --cream:#f6f1e6; --paper:#fffdf8; --gold:#c99a3c; --gold-light:#e6c876;
+    --ink:#0f1b2d; --slate:#5c6b83; --slate-light:#93a1b8; --line:#e7e1d2;
+    --red-flag:#c8342f; --yellow-flag:#f2b632; --green-flag:#1e7a46; --blue-status:#2b5fb0;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0; background:var(--cream); font-family:'Inter',system-ui,sans-serif; color:var(--ink);}
+  a{color:inherit; text-decoration:none;} button{font-family:inherit;}
+
+  header{position:sticky; top:0; z-index:20; background:var(--paper); border-bottom:1px solid var(--line);}
+  .flagbar{height:3px; background:linear-gradient(90deg, var(--red-flag) 0 33%, var(--yellow-flag) 33% 66%, var(--green-flag) 66% 100%);}
+  .headrow{display:flex; align-items:center; gap:12px; padding:13px 18px;}
+  .iconbtn{width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--navy-800); flex:none;}
+  .iconbtn:hover{background:var(--cream);}
+  .head-title{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15.5px;}
+  .head-sub{font-size:11.5px; color:var(--slate-light);}
+
+  main{max-width:640px; margin:0 auto; padding:22px 18px 60px;}
+
+  .doc{background:var(--paper); border-radius:var(--radius); overflow:hidden; box-shadow:0 20px 40px -20px rgba(4,10,25,.35);}
+  .doc-head{padding:26px 26px 20px; border-bottom:3px solid var(--navy-900); display:flex; justify-content:space-between; align-items:flex-start; gap:14px;}
+  .doc-brand{display:flex; align-items:center; gap:11px;}
+  .doc-mark{width:42px; height:42px; border-radius:11px; background:linear-gradient(145deg, var(--gold-light), var(--gold)); display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; color:var(--navy-950); flex:none;}
+  .doc-brand-name{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px;}
+  .doc-brand-sub{font-size:11px; color:var(--slate-light);}
+  .doc-title-block{text-align:right;}
+  .doc-title{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; color:var(--navy-900); letter-spacing:.03em;}
+  .doc-num{font-size:12.5px; color:var(--gold); font-weight:700; margin-top:3px;}
+
+  .doc-body{padding:22px 26px;}
+  .info-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:22px;}
+  .info-box{background:var(--cream); border-radius:10px; padding:12px 14px;}
+  .info-box .l{font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--slate-light); margin-bottom:4px;}
+  .info-box .v{font-weight:700; font-size:14px;}
+
+  table{width:100%; border-collapse:collapse; margin-bottom:16px; font-size:12.5px;}
+  thead th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--slate-light); padding:8px 6px; border-bottom:2px solid var(--line);}
+  thead th.num{text-align:right;}
+  tbody td{padding:9px 6px; border-bottom:1px solid var(--line);}
+  tbody td.num{text-align:right; font-weight:600;}
+  .status-pill{font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px;}
+  .status-pill.en_attente{background:#fdf2de; color:#a9780f;}
+  .status-pill.en_transit{background:#e9f0fc; color:var(--blue-status);}
+  .status-pill.livre{background:#e8f6ee; color:var(--green-flag);}
+
+  .doc-totals{margin-left:auto; width:220px;}
+  .doc-totals .row{display:flex; justify-content:space-between; padding:6px 0; font-size:13px;}
+  .doc-totals .row.grand{border-top:2px solid var(--navy-900); margin-top:6px; padding-top:10px; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px;}
+
+  .doc-sign{display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:32px;}
+  .doc-sign .box{text-align:center;}
+  .doc-sign .line{border-top:1px solid var(--slate-light); margin-top:44px; padding-top:6px; font-size:11px; color:var(--slate-light);}
+
+  .actions-bar{display:flex; gap:10px; margin-top:18px;}
+  .btn{border:none; border-radius:11px; padding:13px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13.5px; cursor:pointer; flex:1; display:flex; align-items:center; justify-content:center; gap:7px;}
+  .btn-primary{background:linear-gradient(160deg, var(--navy-700), var(--navy-900)); color:#fff;}
+  .btn-wa{background:#25D366; color:#fff;}
+
+  .loading-state, .error-state{text-align:center; padding:60px 20px; color:var(--slate);}
+
+  @media print{
+    header, .actions-bar{display:none !important;}
+    body{background:#fff;}
+    main{padding:0; max-width:100%;}
+    .doc{box-shadow:none; border:1px solid #ddd;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="flagbar"></div>
+  <div class="headrow">
+    <a class="iconbtn" href="bordereaux.html" aria-label="Retour">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <div>
+      <div class="head-title">Bordereau</div>
+      <div class="head-sub">Manifeste d'expédition</div>
+    </div>
+  </div>
+</header>
+
+<main id="mainContent">
+  <div class="loading-state" id="loadingState">Chargement du bordereau…</div>
+</main>
+
+<script>
+  // ============================================================
+  // CONFIGURATION FIREBASE — mêmes clés que sur les autres pages
+  // ============================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyDoWCBh3rschFm97Z5Y7ax1bamhadDS42Q",
+    authDomain: "africa-vision-3b38f.firebaseapp.com",
+    projectId: "africa-vision-3b38f",
+    storageBucket: "africa-vision-3b38f.firebasestorage.app",
+    messagingSenderId: "233363053035",
+    appId: "1:233363053035:web:6a5ef497fbf0991216e1ae"
+  };
+  const REQUIRE_AUTH = true;
+  const LOGIN_URL = "index.html";
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  const fmtDate = ts => {
+    if(!ts) return '—';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleDateString('fr-FR');
+  };
+  const statusLabel = c => ({en_attente:'En attente', en_transit:'En transit', livre:'Livré'}[c] || c);
+
+  const bordereauId = new URLSearchParams(window.location.search).get('id');
+
+  auth.onAuthStateChanged(user => {
+    if(user){ init(); }
+    else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
+    else { init(); }
+  });
+
+  async function init(){
+    if(!bordereauId){
+      document.getElementById('mainContent').innerHTML = '<div class="error-state">Aucun bordereau spécifié.</div>';
+      return;
+    }
+    try{
+      const doc = await db.collection('bordereaux').doc(bordereauId).get();
+      if(!doc.exists){
+        document.getElementById('mainContent').innerHTML = '<div class="error-state">Ce bordereau est introuvable.</div>';
+        return;
+      }
+      const data = doc.data();
+      const colisIds = data.colisIds || [];
+      const colisDocs = await Promise.all(colisIds.map(id => db.collection('colis').doc(id).get()));
+      const colisList = colisDocs.filter(d => d.exists).map(d => ({id:d.id, data:d.data()}));
+      render(data, colisList);
+    }catch(err){
+      console.error(err);
+      document.getElementById('mainContent').innerHTML = '<div class="error-state">Impossible de charger le bordereau. Vérifie la configuration Firebase.</div>';
+    }
+  }
+
+  function render(b, colisList){
+    const poidsTotal = colisList.reduce((s,c) => s + (c.data.poidsTotal||0), 0);
+    const isMaritime = b.mode === 'Maritime';
+
+    document.getElementById('mainContent').innerHTML = `
+      <div class="doc">
+        <div class="doc-head">
+          <div class="doc-brand">
+            <div class="doc-mark">AV</div>
+            <div><div class="doc-brand-name">Africa Vision Multiservices</div><div class="doc-brand-sub">Conakry, Guinée</div></div>
+          </div>
+          <div class="doc-title-block">
+            <div class="doc-title">${isMaritime?'🚢':'✈️'} BORDEREAU ${b.mode?.toUpperCase()||''}</div>
+            <div class="doc-num">${b.numeroBordereau||bordereauId}</div>
+          </div>
+        </div>
+
+        <div class="doc-body">
+          <div class="info-grid">
+            <div class="info-box"><div class="l">Référence</div><div class="v">${b.reference||'—'}</div></div>
+            <div class="info-box"><div class="l">Transporteur</div><div class="v">${b.transporteur||'—'}</div></div>
+            <div class="info-box"><div class="l">Date de départ</div><div class="v">${fmtDate(b.dateDepart)}</div></div>
+            <div class="info-box"><div class="l">Nombre de colis</div><div class="v">${colisList.length}</div></div>
+          </div>
+
+          <table>
+            <thead>
+              <tr><th>N° Suivi</th><th>Destinataire</th><th>Destination</th><th class="num">Poids</th><th>Statut</th></tr>
+            </thead>
+            <tbody>
+              ${colisList.map(c => {
+                const dest = c.data.destinataire || {};
+                const route = c.data.route || {};
+                const statut = c.data.statut || 'en_attente';
+                return `<tr>
+                  <td><strong>${c.data.numeroSuivi||c.id}</strong></td>
+                  <td>${[dest.prenom,dest.nom].filter(Boolean).join(' ')||'—'}</td>
+                  <td>${route.arrivee||'—'}</td>
+                  <td class="num">${(c.data.poidsTotal||0).toFixed(1)} kg</td>
+                  <td><span class="status-pill ${statut}">${statusLabel(statut)}</span></td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+
+          <div class="doc-totals">
+            <div class="row grand"><span>Poids total</span><span>${poidsTotal.toFixed(1)} kg</span></div>
+          </div>
+
+          <div class="doc-sign">
+            <div class="box"><div class="line">Signature agent Africa Vision</div></div>
+            <div class="box"><div class="line">Signature transporteur</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions-bar">
+        <button class="btn btn-primary" id="printBtn">🖨️ Imprimer / PDF</button>
+        <button class="btn btn-wa" id="waBtn">📤 WhatsApp</button>
+      </div>
+    `;
+
+    document.getElementById('printBtn').addEventListener('click', () => window.print());
+    document.getElementById('waBtn').addEventListener('click', () => {
+      const msg = `Bordereau Africa Vision\n${b.numeroBordereau||bordereauId}\nMode : ${b.mode||''}\nRéférence : ${b.reference||''}\nDépart : ${fmtDate(b.dateDepart)}\nColis : ${colisList.length}\nPoids total : ${poidsTotal.toFixed(1)} kg`;
+      window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
+    });
+  }
+</script>
+
+</body>
+</html>
