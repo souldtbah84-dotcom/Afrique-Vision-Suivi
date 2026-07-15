@@ -176,6 +176,8 @@
   <div class="modal">
     <div class="modal-head">
       <span class="cc-track" id="modalTrack">—</span>
+      <a id="modalLabelLink" href="#" style="margin-left:auto; font-size:12.5px; font-weight:600; color:var(--navy-700); white-space:nowrap;">🏷️ Étiquette</a>
+      <a id="modalReceiptLink" href="#" style="margin-left:10px; margin-right:8px; font-size:12.5px; font-weight:600; color:var(--navy-700); white-space:nowrap;">🧾 Reçu</a>
       <button class="modal-close" id="modalClose" aria-label="Fermer">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
@@ -208,6 +210,9 @@
     <div class="modal-section">
       <h4>Frais</h4>
       <div id="modalFees"></div>
+    </div>
+    <div class="modal-section">
+      <button id="modalDeleteBtn" style="width:100%; border:1.5px solid #f3c6c4; background:#fff; color:var(--red-flag); border-radius:11px; padding:12px; font-weight:600; font-size:13.5px; cursor:pointer;">🗑️ Supprimer ce colis</button>
     </div>
   </div>
 </div>
@@ -348,6 +353,8 @@
   function openDetail(id, data){
     currentDetailId = id;
     document.getElementById('modalTrack').textContent = data.numeroSuivi || id;
+    document.getElementById('modalReceiptLink').href = "recu.html?id=" + id;
+    document.getElementById('modalLabelLink').href = "etiquette.html?id=" + id;
     document.getElementById('modalStatusSelect').value = data.statut || 'en_attente';
 
     const dest = data.destinataire || {};
@@ -395,6 +402,33 @@
       alert("Impossible de mettre à jour le statut. Vérifie les règles Firestore.");
     }finally{
       btn.disabled = false; btn.textContent = "Mettre à jour";
+    }
+  });
+
+  document.getElementById('modalDeleteBtn').addEventListener('click', async () => {
+    if(!currentDetailId) return;
+    const target = allDocs.find(d => d.id === currentDetailId);
+    const track = target ? (target.data.numeroSuivi || currentDetailId) : currentDetailId;
+    if(!confirm("Supprimer définitivement le colis " + track + " et tous ses paiements associés ?\n\nCette action est irréversible.")) return;
+
+    const btn = document.getElementById('modalDeleteBtn');
+    btn.disabled = true; btn.textContent = "Suppression…";
+    try{
+      const paySnap = await db.collection('paiements').where('colisId', '==', currentDetailId).get();
+      const batch = db.batch();
+      paySnap.forEach(doc => batch.delete(doc.ref));
+      batch.delete(db.collection('colis').doc(currentDetailId));
+      await batch.commit();
+
+      allDocs = allDocs.filter(d => d.id !== currentDetailId);
+      renderKPIs();
+      applyFilters();
+      modalOverlay.classList.remove('show');
+    }catch(err){
+      console.error(err);
+      alert("Impossible de supprimer. Vérifie les règles Firestore.");
+    }finally{
+      btn.disabled = false; btn.textContent = "🗑️ Supprimer ce colis";
     }
   });
 </script>
