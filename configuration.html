@@ -77,6 +77,15 @@
   .role-pill.comptable{background:#e9f0fc; color:var(--blue-status);}
   .role-pill.agent{background:#e8f6ee; color:var(--green-flag);}
   .role-pill.autre{background:var(--cream); color:var(--slate);}
+
+  .perm-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .perm-check{
+    display:flex; align-items:center; gap:9px; border:1.5px solid var(--line); border-radius:10px;
+    padding:10px 12px; font-size:13.5px; font-weight:500; cursor:pointer;
+  }
+  .perm-check input{width:17px; height:17px; accent-color:var(--navy-700); cursor:pointer; flex:none;}
+  .perm-badges{display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;}
+  .perm-badge{font-size:10px; font-weight:700; padding:2px 7px; border-radius:6px; background:var(--cream); color:var(--slate);}
   .status-dot{width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:5px;}
   .status-dot.actif{background:var(--green-flag);}
   .status-dot.inactif{background:var(--slate-light);}
@@ -224,7 +233,29 @@
       <option value="actif">Actif</option>
       <option value="inactif">Inactif</option>
     </select></div></div>
+
+    <div class="field">
+      <label>Modules accessibles</label>
+      <div class="info-banner" style="margin-bottom:10px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg>
+        <span>Le rôle DGA a toujours accès à tout, quelles que soient ces cases.</span>
+      </div>
+      <div class="perm-grid" id="permGrid">
+        <label class="perm-check"><input type="checkbox" id="perm_colis" checked> Colis</label>
+        <label class="perm-check"><input type="checkbox" id="perm_clients" checked> Clients</label>
+        <label class="perm-check"><input type="checkbox" id="perm_paiements" checked> Paiements</label>
+        <label class="perm-check"><input type="checkbox" id="perm_bordereaux" checked> Bordereaux</label>
+        <label class="perm-check"><input type="checkbox" id="perm_factures" checked> Factures</label>
+        <label class="perm-check"><input type="checkbox" id="perm_configuration" checked> Configuration</label>
+      </div>
+    </div>
+
     <button class="btn" id="userSaveBtn">Enregistrer</button>
+
+    <div id="resetPwdBlock" style="display:none; margin-top:12px;">
+      <button class="btn" id="resetPwdBtn" style="background:var(--cream); color:var(--navy-800); border:1px solid var(--line);">✉️ Envoyer un lien de réinitialisation de mot de passe</button>
+      <div class="alert" id="resetPwdAlert" style="margin-top:10px;"></div>
+    </div>
   </div>
 </div>
 
@@ -249,8 +280,31 @@
 
   const fmtGNF = n => new Intl.NumberFormat('fr-FR').format(Math.round(n||0)) + " GNF";
 
-  auth.onAuthStateChanged(user => {
-    if(user){ loadCategories(); loadDestinations(); loadRate(); loadUsers(); }
+  async function checkModuleAccess(moduleKey){
+    try{
+      const snap = await db.collection('utilisateurs').where('email', '==', auth.currentUser.email).limit(1).get();
+      if(snap.empty) return true;
+      const u = snap.docs[0].data();
+      if(u.role === 'dga') return true;
+      if(u.statut === 'inactif') return false;
+      if(!u.permissions) return true;
+      return u.permissions[moduleKey] !== false;
+    }catch(e){
+      console.warn("Vérification des permissions impossible, accès autorisé par défaut", e);
+      return true;
+    }
+  }
+
+  auth.onAuthStateChanged(async user => {
+    if(user){
+      const allowed = await checkModuleAccess('configuration');
+      if(!allowed){
+        alert("Tu n'as pas la permission d'accéder à la Configuration.");
+        window.location.href = "dashboard.html";
+        return;
+      }
+      loadCategories(); loadDestinations(); loadRate(); loadUsers();
+    }
     else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
     else { loadCategories(); loadDestinations(); loadRate(); loadUsers(); }
   });
@@ -423,6 +477,9 @@
   // =====================================================================
   // UTILISATEURS
   // =====================================================================
+  const PERM_KEYS = ['colis','clients','paiements','bordereaux','factures','configuration'];
+  const PERM_LABELS = {colis:'Colis', clients:'Clients', paiements:'Paiements', bordereaux:'Bordereaux', factures:'Factures', configuration:'Config'};
+
   let editingUserId = null;
   function loadUsers(){
     db.collection('utilisateurs').get().then(snap => {
@@ -434,12 +491,16 @@
       list.innerHTML = '';
       snap.forEach(doc => {
         const u = doc.data();
+        const perms = u.permissions || {};
+        const activeModules = u.role === 'dga' ? ['Accès total'] : PERM_KEYS.filter(k => perms[k] !== false).map(k => PERM_LABELS[k]);
         const row = document.createElement('div');
         row.className = 'item-row';
+        row.style.alignItems = 'flex-start';
         row.innerHTML = `
           <div class="item-main">
             <div class="item-title">${u.prenom||''} ${u.nom||''}</div>
             <div class="item-sub"><span class="status-dot ${u.statut||'actif'}"></span>${u.email||''}</div>
+            <div class="perm-badges">${activeModules.map(m => `<span class="perm-badge">${m}</span>`).join('') || '<span class="perm-badge">Aucun module</span>'}</div>
           </div>
           <span class="role-pill ${u.role||'autre'}">${(u.role||'autre').toUpperCase()}</span>
           <div class="item-actions">
@@ -460,7 +521,15 @@
     document.getElementById('user_email').value = data ? data.email : '';
     document.getElementById('user_role').value = data ? data.role : 'agent';
     document.getElementById('user_statut').value = data ? data.statut : 'actif';
+
+    const perms = (data && data.permissions) || {};
+    PERM_KEYS.forEach(k => {
+      document.getElementById('perm_' + k).checked = perms[k] !== false;
+    });
+
     document.getElementById('userAlert').classList.remove('show');
+    document.getElementById('resetPwdBlock').style.display = id ? 'block' : 'none';
+    document.getElementById('resetPwdAlert').classList.remove('show');
     document.getElementById('userOverlay').classList.add('show');
   }
   document.getElementById('addUserBtn').addEventListener('click', () => openUserModal(null, null));
@@ -476,13 +545,16 @@
       alertBox.classList.add('show');
       return;
     }
+    const permissions = {};
+    PERM_KEYS.forEach(k => { permissions[k] = document.getElementById('perm_' + k).checked; });
+
     const btn = document.getElementById('userSaveBtn');
     btn.disabled = true;
     try{
       if(editingUserId){
-        await db.collection('utilisateurs').doc(editingUserId).update({nom, prenom, email, role, statut});
+        await db.collection('utilisateurs').doc(editingUserId).update({nom, prenom, email, role, statut, permissions});
       }else{
-        await db.collection('utilisateurs').add({nom, prenom, email, role, statut, dateAjout: firebase.firestore.FieldValue.serverTimestamp()});
+        await db.collection('utilisateurs').add({nom, prenom, email, role, statut, permissions, dateAjout: firebase.firestore.FieldValue.serverTimestamp()});
       }
       document.getElementById('userOverlay').classList.remove('show');
       loadUsers();
@@ -491,6 +563,33 @@
       alertBox.textContent = "Erreur d'enregistrement. Vérifie les règles Firestore.";
       alertBox.classList.add('show');
     }finally{ btn.disabled = false; }
+  });
+
+  document.getElementById('resetPwdBtn').addEventListener('click', async () => {
+    const email = document.getElementById('user_email').value.trim();
+    const alertBox = document.getElementById('resetPwdAlert');
+    if(!email){
+      alertBox.textContent = "Aucun email renseigné.";
+      alertBox.classList.add('show');
+      return;
+    }
+    const btn = document.getElementById('resetPwdBtn');
+    btn.disabled = true; btn.textContent = "Envoi…";
+    try{
+      await auth.sendPasswordResetEmail(email);
+      alertBox.textContent = "Email envoyé à " + email + ". L'utilisateur doit suivre le lien pour définir son mot de passe.";
+      alertBox.style.background = "#eafaf1";
+      alertBox.style.color = "#1e7a46";
+      alertBox.style.borderColor = "#bfe8cf";
+      alertBox.classList.add('show');
+    }catch(err){
+      console.error(err);
+      alertBox.textContent = "Impossible d'envoyer l'email. Vérifie que ce compte existe dans Firebase Authentication.";
+      alertBox.style.background = ""; alertBox.style.color = ""; alertBox.style.borderColor = "";
+      alertBox.classList.add('show');
+    }finally{
+      btn.disabled = false; btn.textContent = "✉️ Envoyer un lien de réinitialisation de mot de passe";
+    }
   });
 
   // ---------------- SUPPRESSION GÉNÉRIQUE ----------------
