@@ -36,33 +36,51 @@
   main{max-width:560px; margin:0 auto; padding:22px 18px 60px;}
 
   .receipt{background:var(--paper); border-radius:var(--radius); overflow:hidden; box-shadow:0 20px 40px -20px rgba(4,10,25,.35);}
-  .r-stub{background:linear-gradient(160deg, var(--navy-900), var(--navy-800) 70%); color:var(--cream); padding:26px 24px 20px; position:relative;}
-  .r-stub::after{content:""; position:absolute; left:0; right:0; bottom:-1px; height:14px; background:radial-gradient(circle at 10px 0, transparent 9px, var(--paper) 9.5px) 0 -7px / 24px 14px repeat-x;}
-  .flagbar-sm{height:3px; width:52px; border-radius:2px; margin-bottom:14px; background:linear-gradient(90deg, var(--red-flag) 0 33%, var(--yellow-flag) 33% 66%, var(--green-flag) 66% 100%);}
-  .r-brand{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
-  .r-mark{width:36px; height:36px; border-radius:9px; background:linear-gradient(145deg, var(--gold-light), var(--gold)); display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:13px; color:var(--navy-950);}
+  .r-topbar{background:linear-gradient(160deg, var(--navy-900), var(--navy-800) 70%); color:var(--cream); padding:20px 24px;}
+  .flagbar-sm{height:3px; width:52px; border-radius:2px; margin-bottom:12px; background:linear-gradient(90deg, var(--red-flag) 0 33%, var(--yellow-flag) 33% 66%, var(--green-flag) 66% 100%);}
+  .r-topbar-row{display:flex; justify-content:space-between; align-items:flex-start;}
+  .r-brand{display:flex; align-items:center; gap:10px;}
+  .r-mark{width:36px; height:36px; border-radius:9px; background:linear-gradient(145deg, var(--gold-light), var(--gold)); display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:13px; color:var(--navy-950); flex:none;}
   .r-brand-name{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px;}
-  .r-brand-sub{font-size:10.5px; color:#b9c6de; letter-spacing:.1em; text-transform:uppercase;}
-  .r-track-label{font-size:11px; color:#b9c6de; text-transform:uppercase; letter-spacing:.1em; margin-bottom:4px;}
-  .r-track{font-family:'Space Grotesk',sans-serif; font-size:26px; font-weight:700;}
-  .r-status{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:5px 11px; border-radius:999px; margin-top:10px;}
+  .r-brand-sub{font-size:10.5px; color:#b9c6de;}
+  .r-emitted{font-size:11px; color:#b9c6de; text-align:right; white-space:nowrap;}
+
+  .r-body{padding:22px 24px;}
+  .r-doc-title{font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:700; margin:0 0 14px;}
+
+  .r-info-row{display:flex; flex-wrap:wrap; gap:8px 18px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px dashed var(--line); font-size:12.5px;}
+  .r-info-row .item .l{color:var(--slate-light); font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; margin-bottom:2px;}
+  .r-info-row .item .v{font-weight:700;}
+  .r-status{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px;}
   .r-status.en_attente{background:#fdf2de; color:#a9780f;}
   .r-status.en_transit{background:#e9f0fc; color:var(--blue-status);}
   .r-status.livre{background:#e8f6ee; color:var(--green-flag);}
 
-  .r-body{padding:22px 24px;}
   .r-section{margin-bottom:20px;}
   .r-section h4{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--slate-light); margin:0 0 9px;}
-  .r-route{display:flex; align-items:center; justify-content:center; gap:12px; background:var(--cream); border-radius:10px; padding:10px; font-size:13.5px; font-weight:600; margin-bottom:18px;}
   .r-two-col{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
   .r-person .name{font-weight:700; font-size:14px; margin-bottom:3px;}
   .r-person .line{font-size:12.5px; color:var(--slate); margin-bottom:2px;}
+
+  .r-track-block{background:var(--cream); border-radius:12px; padding:16px; text-align:center; margin-bottom:20px;}
+  .r-track-label{font-size:11px; color:var(--slate-light); text-transform:uppercase; letter-spacing:.1em; margin-bottom:5px;}
+  .r-track{font-family:'Space Grotesk',sans-serif; font-size:26px; font-weight:700; color:var(--navy-900); letter-spacing:.03em;}
+  .r-track-note{font-size:11.5px; color:var(--slate-light); margin-top:6px;}
+
+  table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  thead th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--slate-light); padding:7px 4px; border-bottom:2px solid var(--line);}
+  thead th.num{text-align:right;}
+  tbody td{padding:8px 4px; border-bottom:1px solid var(--line);}
+  tbody td.num{text-align:right;}
+
   .r-line{display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
   .r-line:last-child{border-bottom:none;}
   .r-line span:first-child{color:var(--slate);}
-  .r-total-box{background:var(--navy-900); color:#fff; border-radius:12px; padding:16px; display:flex; justify-content:space-between; align-items:center; margin-top:10px;}
+  .r-total-box{background:var(--navy-900); color:#fff; border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:4px; margin-top:10px;}
+  .r-total-box .row{display:flex; justify-content:space-between; align-items:center;}
   .r-total-box .lbl{font-size:12.5px; color:#b9c6de;}
   .r-total-box .val{font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700;}
+  .r-total-box .usd{font-size:11.5px; color:#b9c6de; text-align:right;}
 
   .pay-summary{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px;}
   .pay-box{background:var(--cream); border-radius:10px; padding:11px; text-align:center;}
@@ -71,12 +89,19 @@
   .pay-box.green .v{color:var(--green-flag);}
   .pay-box.red .v{color:var(--red-flag);}
 
-  .r-footer{text-align:center; font-size:11px; color:var(--slate-light); padding:16px 24px 22px; border-top:1px dashed var(--line);}
+  .r-sites{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .r-site .l{font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--slate-light); margin-bottom:4px;}
+  .r-site .v{font-weight:700; font-size:13px;}
+  .r-site .p{font-size:12px; color:var(--slate); margin-top:2px;}
+
+  .r-footer{text-align:center; font-size:11px; color:var(--slate-light); padding:16px 24px 22px; border-top:1px dashed var(--line); line-height:1.6;}
+  .r-footer strong{color:var(--slate);}
 
   .actions-bar{display:flex; gap:10px; margin-top:18px;}
   .btn{border:none; border-radius:11px; padding:13px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13.5px; cursor:pointer; flex:1; display:flex; align-items:center; justify-content:center; gap:7px;}
   .btn-primary{background:linear-gradient(160deg, var(--navy-700), var(--navy-900)); color:#fff;}
   .btn-wa{background:#25D366; color:#fff;}
+  .btn-label{background:linear-gradient(160deg, var(--gold), #a97f27); color:#fff;}
 
   .pay-form-card{background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:18px; margin-top:18px;}
   .pay-form-card h4{font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--slate-light); margin:0 0 12px;}
@@ -138,12 +163,28 @@
 
   const fmtGNF = n => new Intl.NumberFormat('fr-FR').format(Math.round(n||0)) + " GNF";
   const fmtDate = ts => { if(!ts) return '—'; const d = ts.toDate ? ts.toDate() : new Date(ts); return d.toLocaleDateString('fr-FR'); };
-  const statusLabel = c => ({en_attente:'En attente', en_transit:'En transit', livre:'Livré'}[c] || c);
+  const fmtDateTime = () => new Date().toLocaleString('fr-FR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+  const statusLabel = c => ({en_attente:'Enregistré', en_transit:'En transit', livre:'Livré'}[c] || c);
+
+  // Taux par défaut si aucun taux n'est défini dans Configuration > Routes & Tarifs
+  let GNF_PER_USD = 9345;
+  const fmtUSD = n => "≈ " + new Intl.NumberFormat('fr-FR', {maximumFractionDigits:1}).format((n||0)/GNF_PER_USD) + " USD";
+
+  function genReference(dateCreation, numeroSuivi){
+    const d = dateCreation && dateCreation.toDate ? dateCreation.toDate() : new Date();
+    const yyyy = d.getFullYear(), mm = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+    return "COL" + yyyy + mm + dd + "-" + (numeroSuivi||'').replace(/^EVD/,'');
+  }
 
   const colisId = new URLSearchParams(window.location.search).get('id');
 
   auth.onAuthStateChanged(user => {
-    if(user){ window._currentUser = user; init(); }
+    if(user){
+      window._currentUser = user;
+      db.collection('config').doc('general').get().then(doc => {
+        if(doc.exists && doc.data().tauxChangeGNFUSD) GNF_PER_USD = Number(doc.data().tauxChangeGNFUSD);
+      }).catch(() => {}).finally(init);
+    }
     else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
     else { init(); }
   });
@@ -188,22 +229,29 @@
     const paye = paiements.reduce((s,p) => s + (p.montant||0), 0);
     const reste = Math.max(0, total - paye);
     const statut = c.statut || 'en_attente';
+    const reference = genReference(c.dateCreation, c.numeroSuivi);
 
     document.getElementById('mainContent').innerHTML = `
       <div class="receipt">
-        <div class="r-stub">
+        <div class="r-topbar">
           <div class="flagbar-sm"></div>
-          <div class="r-brand">
-            <div class="r-mark">AV</div>
-            <div><div class="r-brand-name">Africa Vision</div><div class="r-brand-sub">Reçu d'expédition</div></div>
+          <div class="r-topbar-row">
+            <div class="r-brand">
+              <div class="r-mark">AV</div>
+              <div><div class="r-brand-name">Africa Vision Multiservices</div><div class="r-brand-sub">Solutions logistiques</div></div>
+            </div>
+            <div class="r-emitted">${fmtDateTime()}</div>
           </div>
-          <div class="r-track-label">Numéro de suivi</div>
-          <div class="r-track">${c.numeroSuivi || colisId}</div>
-          <span class="r-status ${statut}">${statusLabel(statut)}</span>
         </div>
 
         <div class="r-body">
-          <div class="r-route">🇬🇳 ${route.depart||'GUINEE'} → ${route.arrivee||'—'}</div>
+          <div class="r-doc-title">Ticket d'envoi</div>
+
+          <div class="r-info-row">
+            <div class="item"><div class="l">Numéro de référence</div><div class="v">${reference}</div></div>
+            <div class="item"><div class="l">Date</div><div class="v">${fmtDate(c.dateCreation)}</div></div>
+            <div class="item"><div class="l">Statut</div><span class="r-status ${statut}">${statusLabel(statut)}</span></div>
+          </div>
 
           <div class="r-section">
             <div class="r-two-col">
@@ -211,29 +259,49 @@
                 <h4>Expéditeur</h4>
                 <div class="name">${[exp.prenom, exp.nom].filter(Boolean).join(' ')||'—'}</div>
                 <div class="line">${exp.telephone||''}</div>
-                <div class="line">${exp.adresse||''}</div>
+                <div class="line">${exp.email||''}</div>
+                <div class="line">${route.depart||'GUINEE'}</div>
               </div>
               <div class="r-person">
                 <h4>Destinataire</h4>
                 <div class="name">${[dest.prenom, dest.nom].filter(Boolean).join(' ')||'—'}</div>
                 <div class="line">${dest.telephone||''}</div>
-                <div class="line">${dest.adresse||''}</div>
+                <div class="line">${dest.email||''}</div>
+                <div class="line">${route.arrivee||''}</div>
               </div>
             </div>
           </div>
 
-          <div class="r-section">
-            <h4>Produits</h4>
-            ${(c.produits||[]).map(p => `<div class="r-line"><span>x${p.quantite} ${p.nom}</span><span>${(p.quantite*p.poidsUnitaire).toFixed(1)} kg</span></div>`).join('')}
-            <div class="r-line"><span>Poids total</span><span><strong>${(c.poidsTotal||0).toFixed(1)} kg</strong></span></div>
+          <div class="r-track-block">
+            <div class="r-track-label">Numéro de suivi</div>
+            <div class="r-track">${c.numeroSuivi || colisId}</div>
+            <div class="r-track-note">Conservez ce numéro pour suivre votre colis</div>
           </div>
 
           <div class="r-section">
-            <h4>Frais d'expédition</h4>
-            <div class="r-line"><span>Frais de base</span><span>${fmtGNF(frais.fraisBase)}</span></div>
+            <h4>Description</h4>
+            <table>
+              <thead><tr><th>Produit</th><th class="num">Qté</th><th class="num">Poids</th><th class="num">Valeur</th></tr></thead>
+              <tbody>
+                ${(c.produits||[]).map(p => `<tr>
+                  <td>${p.nom}</td>
+                  <td class="num">${p.quantite}</td>
+                  <td class="num">${(p.quantite*p.poidsUnitaire).toFixed(1)} kg</td>
+                  <td class="num">${fmtGNF(p.quantite*p.valeurUnitaire)}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="r-section">
+            <h4>Détail financier</h4>
+            <div class="r-line"><span>Frais d'expédition</span><span>${fmtGNF(frais.fraisBase)}</span></div>
             ${frais.rabais>0 ? `<div class="r-line"><span>Rabais</span><span>-${fmtGNF(frais.rabais)}</span></div>` : ''}
             ${(frais.extras||[]).map(f => `<div class="r-line"><span>${f.label||'Frais'}</span><span>${fmtGNF(f.montant)}</span></div>`).join('')}
-            <div class="r-total-box"><span class="lbl">Total à payer</span><span class="val">${fmtGNF(total)}</span></div>
+            <div class="r-total-box">
+              <div class="row"><span class="lbl">Total à payer</span><span class="val">${fmtGNF(total)}</span></div>
+              <div class="usd">${fmtUSD(total)}</div>
+            </div>
           </div>
 
           <div class="r-section">
@@ -245,14 +313,38 @@
             </div>
             ${paiements.length ? paiements.map(p => `<div class="r-line"><span>${p.methode||'Paiement'} · ${fmtDate(p.date)}</span><span>${fmtGNF(p.montant)}</span></div>`).join('') : '<div class="r-line"><span>Aucun paiement enregistré</span></div>'}
           </div>
+
+          <div class="r-section">
+            <h4>Sites d'opération et informations utiles</h4>
+            <div class="r-sites">
+              <div class="r-site">
+                <div class="l">Site d'enregistrement</div>
+                <div class="v">Bureau Conakry — GUINÉE</div>
+                <div class="p">+224 XXX XX XX XX</div>
+              </div>
+              <div class="r-site">
+                <div class="l">Livraison</div>
+                <div class="v">${route.arrivee||'—'}</div>
+                <div class="p">${dest.adresse || 'Adresse du destinataire'}</div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="r-footer">Africa Vision Multiservices · Conakry, Guinée · Merci de votre confiance</div>
+        <div class="r-footer">
+          Conservez ce ticket jusqu'à la livraison.<br>
+          <strong>Avis légal :</strong> en acceptant ce reçu, vous acceptez nos conditions de transport.<br><br>
+          Africa Vision Multiservices — Solutions logistiques<br>
+          Conakry, Guinée
+        </div>
       </div>
 
       <div class="actions-bar">
-        <button class="btn btn-primary" id="printBtn">🖨️ Imprimer</button>
+        <button class="btn btn-primary" id="printBtn">🖨️ Imprimer / PDF</button>
         <button class="btn btn-wa" id="waBtn">📤 WhatsApp</button>
+      </div>
+      <div class="actions-bar">
+        <a class="btn btn-label" href="etiquette.html?id=${colisId}">🏷️ Étiquette d'expédition</a>
       </div>
 
       ${reste > 0 ? `
