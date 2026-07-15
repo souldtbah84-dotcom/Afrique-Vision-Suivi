@@ -102,6 +102,8 @@
   .btn-primary{background:linear-gradient(160deg, var(--navy-700), var(--navy-900)); color:#fff;}
   .btn-wa{background:#25D366; color:#fff;}
   .btn-label{background:linear-gradient(160deg, var(--gold), #a97f27); color:#fff;}
+  .btn-danger{background:#fff; color:var(--red-flag); border:1.5px solid #f3c6c4;}
+  .btn-danger:hover{background:var(--error-bg);}
 
   .pay-form-card{background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:18px; margin-top:18px;}
   .pay-form-card h4{font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--slate-light); margin:0 0 12px;}
@@ -346,6 +348,9 @@
       <div class="actions-bar">
         <a class="btn btn-label" href="etiquette.html?id=${colisId}">🏷️ Étiquette d'expédition</a>
       </div>
+      <div class="actions-bar">
+        <button class="btn btn-danger" id="deleteBtn">🗑️ Supprimer ce colis</button>
+      </div>
 
       ${reste > 0 ? `
       <div class="pay-form-card">
@@ -364,6 +369,24 @@
     `;
 
     document.getElementById('printBtn').addEventListener('click', () => window.print());
+    document.getElementById('deleteBtn').addEventListener('click', async () => {
+      const confirmMsg = "Supprimer définitivement le colis " + (c.numeroSuivi||colisId) + " et tous ses paiements associés ?\n\nCette action est irréversible.";
+      if(!confirm(confirmMsg)) return;
+      const delBtn = document.getElementById('deleteBtn');
+      delBtn.disabled = true; delBtn.textContent = "Suppression…";
+      try{
+        const paySnap = await db.collection('paiements').where('colisId', '==', colisId).get();
+        const batch = db.batch();
+        paySnap.forEach(doc => batch.delete(doc.ref));
+        batch.delete(db.collection('colis').doc(colisId));
+        await batch.commit();
+        window.location.href = "colis.html";
+      }catch(err){
+        console.error(err);
+        alert("Impossible de supprimer. Vérifie les règles Firestore.");
+        delBtn.disabled = false; delBtn.textContent = "🗑️ Supprimer ce colis";
+      }
+    });
     document.getElementById('waBtn').addEventListener('click', () => {
       const msg = `Reçu Africa Vision\nColis : ${c.numeroSuivi||colisId}\nDestinataire : ${[dest.prenom,dest.nom].filter(Boolean).join(' ')}\nTotal : ${fmtGNF(total)}\nPayé : ${fmtGNF(paye)}\nReste : ${fmtGNF(reste)}`;
       window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
