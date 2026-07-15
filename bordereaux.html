@@ -139,7 +139,7 @@
       </select></div>
     </div>
     <div class="field">
-      <label>Référence (n° conteneur / n° vol) *</label>
+      <label>Référence (n° conteneur / n° vol) — optionnel</label>
       <div class="input-shell"><input type="text" id="b_reference" placeholder="Ex : MSCU1234567 ou AF718"></div>
     </div>
     <div class="field">
@@ -247,7 +247,7 @@
         <div class="b-icon ${isMaritime?'maritime':'aerien'}">${isMaritime?'🚢':'✈️'}</div>
         <div class="b-main">
           <div class="b-num">${data.numeroBordereau || id}</div>
-          <div class="b-sub">${data.reference||''} · ${fmtDate(data.dateDepart)}</div>
+          <div class="b-sub">${[data.reference, fmtDate(data.dateDepart)].filter(Boolean).join(' · ')}</div>
         </div>
         <div class="b-count"><div class="n">${(data.colisIds||[]).length}</div><div class="l">colis</div></div>
       `;
@@ -307,8 +307,8 @@
     const dateStr = document.getElementById('b_date').value;
     const alertBox = document.getElementById('createAlert');
 
-    if(!reference || !dateStr){
-      alertBox.textContent = "Merci de renseigner au moins la référence et la date de départ.";
+    if(!dateStr){
+      alertBox.textContent = "Merci de renseigner au moins la date de départ.";
       alertBox.classList.add('show');
       return;
     }
