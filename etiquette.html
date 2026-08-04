@@ -8,7 +8,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/JsBarcode/3.11.5/JsBarcode.all.min.js"></script>
 
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@500;700&family=Inter:wght@400;500;600;700&display=swap');
@@ -162,7 +161,10 @@
     const numeroSuivi = c.numeroSuivi || colisId;
     const nbArticles = (c.produits||[]).reduce((s,p) => s + (Number(p.quantite)||0), 0) || 1;
     const modeLabel = "AÉRIEN"; // valeur par défaut ; ajuste manuellement si l'envoi est maritime
-    const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=" + encodeURIComponent(numeroSuivi);
+    // Lien vers la page publique de suivi de colis — adapte si l'adresse change un jour
+    const TRACKING_BASE_URL = "https://souldtbah84-dotcom.github.io/Afrique-Vision-Suivi/";
+    const trackingLink = TRACKING_BASE_URL + "?num=" + encodeURIComponent(numeroSuivi);
+    const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=" + encodeURIComponent(trackingLink);
 
     document.getElementById('mainContent').innerHTML = `
       <div class="label" id="labelCard">
@@ -184,11 +186,6 @@
             <div class="lbl-caption">CODE DE SUIVI</div>
             <div class="lbl-track-code">${numeroSuivi}</div>
           </div>
-        </div>
-
-        <div class="lbl-div lbl-barcode-section">
-          <svg id="barcode"></svg>
-          <div class="lbl-track-code-sm">${numeroSuivi}</div>
         </div>
 
         <div class="lbl-div lbl-section">
@@ -221,14 +218,6 @@
         <button class="btn btn-primary" id="printBtn">🖨️ Imprimer / Télécharger (PDF)</button>
       </div>
     `;
-
-    try{
-      JsBarcode("#barcode", numeroSuivi, {
-        format:"CODE128", width:2, height:46, displayValue:false, margin:0, background:"#ffffff", lineColor:"#0a0a0a"
-      });
-    }catch(err){
-      console.warn("Code-barres indisponible :", err);
-    }
 
     document.getElementById('printBtn').addEventListener('click', () => window.print());
   }
