@@ -131,6 +131,36 @@
   }
   .cta:active{transform:translateY(1px);}
 
+  /* Carte "Argent encaissé" */
+  .revenue-card{
+    position:relative; overflow:hidden;
+    background:linear-gradient(160deg, var(--navy-800), var(--navy-950));
+    border-radius:16px; padding:20px 20px 18px; margin-bottom:22px; color:#fff;
+    box-shadow:0 16px 30px -16px rgba(15,33,66,.55);
+  }
+  .revenue-card::after{
+    content:""; position:absolute; right:-30px; top:-30px; width:140px; height:140px; border-radius:50%;
+    background:radial-gradient(circle, rgba(201,154,60,.28), transparent 70%);
+  }
+  .revenue-head{display:flex; align-items:center; gap:8px; margin-bottom:12px; position:relative;}
+  .revenue-head svg{color:var(--gold-light); flex:none;}
+  .revenue-label{font-size:12.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:#c7d3e8;}
+  .revenue-main{display:flex; align-items:baseline; gap:8px; position:relative; margin-bottom:16px;}
+  .revenue-value{font-family:'Space Grotesk',sans-serif; font-size:32px; font-weight:700; line-height:1;}
+  .revenue-value.skeleton{
+    width:120px; height:30px; border-radius:6px; background:linear-gradient(90deg,rgba(255,255,255,.08),rgba(255,255,255,.18),rgba(255,255,255,.08));
+    background-size:200% 100%; animation:shimmer 1.3s infinite;
+  }
+  .revenue-unit{font-size:13px; color:#9db0cc; font-weight:600;}
+  .revenue-split{display:flex; gap:10px; position:relative;}
+  .revenue-split > div{flex:1; background:rgba(255,255,255,.06); border-radius:10px; padding:10px 12px;}
+  .rs-label{font-size:11px; color:#9db0cc; text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px;}
+  .rs-value{font-family:'Space Grotesk',sans-serif; font-size:15.5px; font-weight:700;}
+  .rs-value.skeleton{
+    width:60px; height:16px; border-radius:5px; background:linear-gradient(90deg,rgba(255,255,255,.08),rgba(255,255,255,.18),rgba(255,255,255,.08));
+    background-size:200% 100%; animation:shimmer 1.3s infinite; display:inline-block;
+  }
+
   /* KPI cards, style "talon de manifeste" */
   .kpi-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:26px;}
   .kpi{
@@ -301,6 +331,21 @@
     Nouveau colis
   </a>
 
+  <div class="revenue-card" id="revenueCard">
+    <div class="revenue-head">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2.5" y="6" width="19" height="13" rx="2.5" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12.5" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M6.5 6V4.8A1.8 1.8 0 0 1 8.3 3h9.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      <span class="revenue-label">Argent encaissé</span>
+    </div>
+    <div class="revenue-main">
+      <div class="revenue-value skeleton" id="revTotal"></div>
+      <div class="revenue-unit">GNF</div>
+    </div>
+    <div class="revenue-split">
+      <div><div class="rs-label">Aujourd'hui</div><div class="rs-value skeleton" id="revToday"></div></div>
+      <div><div class="rs-label">Ce mois</div><div class="rs-value skeleton" id="revMonth"></div></div>
+    </div>
+  </div>
+
   <div class="kpi-grid" id="kpiGrid">
     <div class="kpi total">
       <div class="kpi-top">
@@ -379,7 +424,7 @@
   // Mets à "false" pour prévisualiser le design SANS être connecté
   // (utile tant que la page de connexion n'est pas encore réglée).
   const REQUIRE_AUTH = true;
-  const LOGIN_URL = "index.html";
+  const LOGIN_URL = "connexion.html";
 
   // ------------------------------------------------------------
   // Hypothèse sur la structure Firestore (collection "colis") :
@@ -387,9 +432,16 @@
   //   destinataire: { nom, prenom }
   //   numeroSuivi: "EVD004821"
   //   dateCreation: Firestore Timestamp
-  // Si tes noms de champs sont différents, dis-le moi et j'ajuste
-  // les requêtes ci-dessous en conséquence.
+  //
+  // Hypothèse sur la structure Firestore (collection "paiements") :
+  //   chaque document = un encaissement réel (argent déjà reçu)
+  //   montant: nombre (en GNF)
+  //   date: Firestore Timestamp OU chaîne "AAAA-MM-JJ"
+  // Si tes noms de champs / ta collection sont différents, dis-le
+  // moi et j'ajuste PAIEMENTS_FIELD_MAP ci-dessous en conséquence.
   // ------------------------------------------------------------
+  const PAIEMENTS_COLLECTION = 'paiements';
+  const PAIEMENTS_FIELD_MAP = { montant: 'montant', date: 'date' };
 
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
@@ -438,7 +490,7 @@
       if(perms.clients === false) hide('navClients');
       if(perms.bordereaux === false){ hide('navBordereaux'); hide('actionBordereau'); }
       if(perms.factures === false) hide('navFactures');
-      if(perms.paiements === false) hide('actionPaiements');
+      if(perms.paiements === false){ hide('actionPaiements'); hide('revenueCard'); }
       if(perms.configuration === false) hide('navConfiguration');
     }catch(e){
       console.warn("Vérification des permissions impossible :", e);
@@ -450,11 +502,13 @@
       applyUser(user);
       applyPermissions();
       loadColis();
+      loadPaiements();
     } else if(REQUIRE_AUTH){
       window.location.href = LOGIN_URL;
     } else {
       document.getElementById('greetName').textContent = 'Bonjour (aperçu)';
       loadColis();
+      loadPaiements();
     }
   });
 
@@ -526,6 +580,53 @@
           <p><strong>Impossible de charger les colis récents.</strong></p>
           <p>Vérifie la configuration Firebase et les règles Firestore.</p>
         </div>`;
+    });
+  }
+
+  function formatGNF(n){
+    return new Intl.NumberFormat('fr-FR').format(Math.round(n || 0));
+  }
+
+  function renderRevenue(total, today, month){
+    document.getElementById('revTotal').textContent = formatGNF(total);
+    document.getElementById('revToday').textContent = formatGNF(today);
+    document.getElementById('revMonth').textContent = formatGNF(month);
+    document.querySelectorAll('#revTotal, #revToday, #revMonth').forEach(el => el.classList.remove('skeleton'));
+  }
+
+  // Extrait "AAAA-MM-JJ" d'un champ date qui peut être un Timestamp Firestore ou une chaîne.
+  function toDateStr(val){
+    if(!val) return '';
+    if(typeof val.toDate === 'function') return val.toDate().toISOString().slice(0, 10);
+    if(typeof val === 'string') return val.slice(0, 10);
+    return '';
+  }
+
+  function loadPaiements(){
+    const F = PAIEMENTS_FIELD_MAP;
+    db.collection(PAIEMENTS_COLLECTION).get().then(snap => {
+      const now = new Date();
+      const todayStr = now.toISOString().slice(0, 10);
+      const monthStr = now.toISOString().slice(0, 7);
+      let total = 0, today = 0, month = 0;
+
+      snap.forEach(doc => {
+        const d = doc.data();
+        const montant = Number(d[F.montant]) || 0;
+        const dateStr = toDateStr(d[F.date]);
+        total += montant;
+        if(dateStr === todayStr) today += montant;
+        if(dateStr.slice(0, 7) === monthStr) month += montant;
+      });
+
+      renderRevenue(total, today, month);
+    }).catch(err => {
+      console.error("Impossible de charger les paiements :", err);
+      ['revTotal', 'revToday', 'revMonth'].forEach(id => {
+        const el = document.getElementById(id);
+        el.classList.remove('skeleton');
+        el.textContent = '—';
+      });
     });
   }
 </script>
