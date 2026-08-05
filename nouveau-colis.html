@@ -47,6 +47,15 @@
   select#destSelect:disabled{background:var(--cream); color:var(--slate);}
   .route-note{font-size:11px; color:var(--slate-light); margin:-12px 0 18px 2px;}
 
+  .mode-toggle{display:flex; gap:8px; margin-bottom:18px;}
+  .mode-btn{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
+    border:1.5px solid var(--line); border-radius:11px; padding:12px; background:#fff;
+    font-weight:600; font-size:14px; color:var(--slate); cursor:pointer;
+  }
+  .mode-btn svg{flex:none;}
+  .mode-btn.active{border-color:var(--navy-700); background:#eaf0fb; color:var(--navy-900);}
+
   .progress{display:flex; gap:6px; margin-bottom:4px;}
   .progress span{flex:1; height:5px; border-radius:3px; background:var(--line);}
   .progress span.done{background:var(--navy-700);}
@@ -179,6 +188,17 @@
       <select id="destSelect"></select>
     </div>
     <div class="route-note">Modifiable uniquement au début de la saisie</div>
+
+    <div class="mode-toggle" id="modeToggle">
+      <button type="button" class="mode-btn active" id="modeAerienBtn" data-mode="aerien">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M10.5 3.5 4 15l3-.5 2-3.5 2.5 6L13 16l-1.5-6L18 6.5c1-.6 2-.2 2.4.5.4.7.2 1.7-.8 2.3L13 13" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        Aérien
+      </button>
+      <button type="button" class="mode-btn" id="modeMaritimeBtn" data-mode="maritime">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 18c1.5 1.3 3 1.3 4.5 0s3-1.3 4.5 0 3 1.3 4.5 0 3-1.3 4.5 0M5 14l1-6h12l1 6M9 8V4h4v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Maritime
+      </button>
+    </div>
 
     <div class="progress" id="progressBar">
       <span></span><span></span><span></span><span></span><span></span>
@@ -344,6 +364,7 @@
 
       <div class="route-bar" style="justify-content:center; gap:14px;">
         <span>🇬🇳 GUINÉE</span> → <span id="summaryDestFlag">🌍 —</span>
+        <span id="summaryModeBadge" style="font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px; background:var(--cream);">✈️ Aérien</span>
       </div>
 
       <div class="summary-card">
@@ -369,7 +390,7 @@
     <div class="success-icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M4 12.5 9.5 18 20 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     <h2>Colis créé avec succès</h2>
     <p style="color:var(--slate); font-size:13.5px;">Numéro de suivi</p>
-    <div class="success-track" id="successTrackNumber">EVD000000</div>
+    <div class="success-track" id="successTrackNumber">AV000000</div>
     <div class="success-actions">
       <a class="btn btn-success" id="viewReceiptBtn" href="#" style="text-decoration:none;">🧾 Voir le reçu</a>
       <button class="btn btn-primary" id="createAnotherBtn">+ Créer un autre colis</button>
@@ -408,6 +429,17 @@
 
   // Destinations par défaut si la collection Firestore "destinations" est vide.
   // Idéalement synchronisées avec ton module Configuration > Routes & Tarifs.
+  let transportMode = "aerien"; // "aerien" | "maritime"
+  document.getElementById('modeAerienBtn').addEventListener('click', () => setTransportMode('aerien'));
+  document.getElementById('modeMaritimeBtn').addEventListener('click', () => setTransportMode('maritime'));
+  function setTransportMode(mode){
+    transportMode = mode;
+    document.getElementById('modeAerienBtn').classList.toggle('active', mode === 'aerien');
+    document.getElementById('modeMaritimeBtn').classList.toggle('active', mode === 'maritime');
+    const badge = document.getElementById('summaryModeBadge');
+    if(badge) badge.textContent = mode === 'maritime' ? '🚢 Maritime' : '✈️ Aérien';
+  }
+
   let DESTINATIONS = [
     {name:"ÉTATS-UNIS", dial:"+1", flag:"🇺🇸"},
     {name:"FRANCE", dial:"+33", flag:"🇫🇷"},
@@ -739,7 +771,7 @@
   // ---------------- SUBMIT ----------------
   function genTrackingNumber(){
     const num = Math.floor(Math.random()*999999);
-    return "EVD" + String(num).padStart(6, "0");
+    return "AV" + String(num).padStart(6, "0");
   }
 
   // Crée ou met à jour une fiche client dans la collection "clients"
@@ -792,6 +824,7 @@
     const payload = {
       numeroSuivi: trackingNumber,
       statut: "en_attente",
+      mode: transportMode,
       route: { depart: "GUINEE", arrivee: d.name },
       expediteur: { nom: val('s_nom'), prenom: val('s_prenom'), telephone: "+224"+val('s_tel'), email: val('s_email'), adresse: val('s_adresse') },
       destinataire: { nom: val('d_nom'), prenom: val('d_prenom'), telephone: d.dial+val('d_tel'), email: val('d_email'), adresse: val('d_adresse') },
