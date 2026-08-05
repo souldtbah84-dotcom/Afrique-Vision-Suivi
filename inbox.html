@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Africa Vision · Inbox</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --navy-950:#0a1830; --navy-900:#0f2142; --navy-800:#16305c; --navy-700:#1e3f78;
+    --cream:#f6f1e6; --paper:#fffdf8; --gold:#c99a3c; --gold-light:#e6c876;
+    --ink:#0f1b2d; --slate:#5c6b83; --slate-light:#93a1b8; --line:#e7e1d2;
+    --red-flag:#c8342f; --yellow-flag:#f2b632; --green-flag:#1e7a46; --blue-status:#2b5fb0;
+    --error-bg:#fdecec; --error-text:#a32621; --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.01ms !important; transition-duration:.01ms !important;} }
+  html,body{margin:0; background:var(--cream); font-family:'Inter',system-ui,sans-serif; color:var(--ink);}
+  a{color:inherit; text-decoration:none;} button{font-family:inherit;}
+
+  header{position:sticky; top:0; z-index:20; background:var(--paper); border-bottom:1px solid var(--line);}
+  .flagbar{height:3px; background:linear-gradient(90deg, var(--red-flag) 0 33%, var(--yellow-flag) 33% 66%, var(--green-flag) 66% 100%);}
+  .headrow{display:flex; align-items:center; gap:12px; padding:13px 18px;}
+  .iconbtn{width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--navy-800); flex:none;}
+  .iconbtn:hover{background:var(--cream);}
+  .head-title{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15.5px;}
+  .head-sub{font-size:11.5px; color:var(--slate-light);}
+
+  main{max-width:640px; margin:0 auto; padding:20px 18px 60px;}
+
+  .filters{display:flex; gap:8px; margin-bottom:18px;}
+  .filter-btn{
+    border:1px solid var(--line); background:#fff; border-radius:100px; padding:8px 16px;
+    font-size:13px; font-weight:600; color:var(--slate); cursor:pointer;
+  }
+  .filter-btn.active{background:var(--navy-900); border-color:var(--navy-900); color:#fff;}
+
+  .msg-list{display:flex; flex-direction:column; gap:10px;}
+  .msg-card{
+    background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:15px 16px;
+    cursor:pointer; transition:border-color .15s;
+  }
+  .msg-card:hover{border-color:var(--navy-700);}
+  .msg-card.unread{border-left:3px solid var(--gold);}
+  .msg-top{display:flex; align-items:center; gap:10px; margin-bottom:6px;}
+  .msg-avatar{
+    width:34px; height:34px; border-radius:50%; background:var(--navy-800); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-weight:600; font-size:12.5px;
+    font-family:'Space Grotesk',sans-serif; flex:none;
+  }
+  .msg-name{font-weight:700; font-size:14.5px;}
+  .msg-date{font-size:11.5px; color:var(--slate-light); margin-left:auto; white-space:nowrap;}
+  .msg-dot{width:7px; height:7px; border-radius:50%; background:var(--gold); flex:none;}
+  .msg-preview{font-size:13.5px; color:var(--slate); margin-left:44px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;}
+  .msg-track{font-family:'Space Grotesk',sans-serif; font-size:11.5px; font-weight:700; color:var(--navy-700); margin-left:44px; margin-top:4px;}
+
+  /* Détail (overlay) */
+  .overlay{position:fixed; inset:0; background:rgba(10,24,48,.5); z-index:40; opacity:0; pointer-events:none; transition:opacity .2s;}
+  .overlay.show{opacity:1; pointer-events:auto;}
+  .detail{
+    position:fixed; right:0; top:0; bottom:0; width:400px; max-width:92vw; background:var(--paper);
+    z-index:50; transform:translateX(100%); transition:transform .25s cubic-bezier(.2,.7,.2,1);
+    display:flex; flex-direction:column;
+  }
+  .detail.show{transform:translateX(0);}
+  .detail-head{padding:20px 20px 16px; border-bottom:1px solid var(--line); display:flex; align-items:flex-start; gap:12px;}
+  .detail-body{padding:18px 20px; flex:1; overflow-y:auto; font-size:14.5px; line-height:1.6;}
+  .detail-foot{padding:16px 20px; border-top:1px solid var(--line); display:flex; gap:10px;}
+  .btn{border:none; border-radius:11px; padding:12px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13.5px; cursor:pointer; flex:1; display:flex; align-items:center; justify-content:center; gap:7px; text-decoration:none;}
+  .btn-primary{background:linear-gradient(160deg, var(--navy-700), var(--navy-900)); color:#fff;}
+  .btn-ghost{background:#fff; border:1.5px solid var(--line); color:var(--navy-900);}
+
+  .empty-state, .error-state, .loading-state{text-align:center; padding:60px 20px; color:var(--slate); background:var(--paper); border:1px dashed var(--line); border-radius:14px;}
+  .empty-state svg{margin-bottom:10px; color:var(--slate-light);}
+  .error-state{border-color:#f3c6c4; background:var(--error-bg); color:var(--error-text); border-style:solid;}
+
+  @media (max-width:480px){ .detail{width:100%; max-width:100%;} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="flagbar"></div>
+  <div class="headrow">
+    <a class="iconbtn" href="dashboard.html" aria-label="Retour">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <div>
+      <div class="head-title">Inbox</div>
+      <div class="head-sub">Messages et demandes des clients</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="filters">
+    <button class="filter-btn active" data-filter="all">Tous</button>
+    <button class="filter-btn" data-filter="unread">Non lus</button>
+  </div>
+
+  <div id="content"><div class="loading-state">Chargement des messages…</div></div>
+</main>
+
+<div class="overlay" id="overlay"></div>
+<div class="detail" id="detail">
+  <div class="detail-head">
+    <div class="msg-avatar" id="dAvatar" style="width:42px;height:42px;font-size:15px;">··</div>
+    <div style="flex:1;">
+      <div class="msg-name" id="dName" style="font-size:16px;">—</div>
+      <div class="head-sub" id="dPhone">—</div>
+    </div>
+    <button class="iconbtn" id="closeDetail" aria-label="Fermer">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="detail-body" id="dBody">—</div>
+  <div class="detail-foot">
+    <a class="btn btn-primary" id="dCallBtn" href="#">Appeler</a>
+    <a class="btn btn-ghost" id="dWhatsappBtn" href="#" target="_blank" rel="noopener">WhatsApp</a>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // CONFIGURATION FIREBASE — mêmes clés que les autres pages
+  // ============================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyDoWCBh3rschFm97Z5Y7ax1bamhadDS42Q",
+    authDomain: "africa-vision-3b38f.firebaseapp.com",
+    projectId: "africa-vision-3b38f",
+    storageBucket: "africa-vision-3b38f.firebasestorage.app",
+    messagingSenderId: "233363053035",
+    appId: "1:233363053035:web:6a5ef497fbf0991216e1ae"
+  };
+  const REQUIRE_AUTH = true;
+  const LOGIN_URL = "index.html";
+
+  // ------------------------------------------------------------
+  // Hypothèse sur la structure Firestore (collection "messages") :
+  //   nom: string, telephone: string (avec indicatif, ex "+224...")
+  //   message: string
+  //   numeroSuivi: string (optionnel, si le message concerne un colis précis)
+  //   dateCreation: Firestore Timestamp
+  //   lu: boolean
+  // Si tes champs sont différents, dis-le moi et j'ajuste.
+  // ------------------------------------------------------------
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  let allMessages = [];
+  let currentFilter = 'all';
+
+  auth.onAuthStateChanged(user => {
+    if(user){ loadMessages(); }
+    else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
+    else { loadMessages(); }
+  });
+
+  function initials(name){
+    if(!name) return '··';
+    return name.trim().split(/\s+/).slice(0,2).map(w => w[0].toUpperCase()).join('');
+  }
+  function fmtDate(ts){
+    const d = ts && ts.toDate ? ts.toDate() : (ts ? new Date(ts) : new Date());
+    return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear() +
+           ' à ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  }
+
+  function loadMessages(){
+    db.collection('messages').orderBy('dateCreation', 'desc').get().then(snap => {
+      allMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      render();
+    }).catch(err => {
+      console.error(err);
+      document.getElementById('content').innerHTML = `
+        <div class="error-state">
+          <p><strong>Impossible de charger les messages.</strong></p>
+          <p style="font-size:12.5px;">Vérifie que la collection "messages" existe et que les règles Firestore autorisent la lecture.</p>
+        </div>`;
+    });
+  }
+
+  function render(){
+    const content = document.getElementById('content');
+    const list = currentFilter === 'unread' ? allMessages.filter(m => !m.lu) : allMessages;
+
+    if(list.length === 0){
+      content.innerHTML = `
+        <div class="empty-state">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M4 4h16v16H4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m4 5 8 7 8-7" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          <p><strong>${currentFilter === 'unread' ? 'Aucun message non lu.' : 'Aucun message pour le moment.'}</strong></p>
+        </div>`;
+      return;
+    }
+
+    content.innerHTML = '<div class="msg-list" id="msgList"></div>';
+    const ul = document.getElementById('msgList');
+    list.forEach(m => {
+      const card = document.createElement('div');
+      card.className = 'msg-card' + (m.lu ? '' : ' unread');
+      card.innerHTML = `
+        <div class="msg-top">
+          <div class="msg-avatar">${initials(m.nom)}</div>
+          <div class="msg-name">${m.nom || 'Client'}</div>
+          ${!m.lu ? '<span class="msg-dot"></span>' : ''}
+          <div class="msg-date">${fmtDate(m.dateCreation)}</div>
+        </div>
+        <div class="msg-preview">${m.message || ''}</div>
+        ${m.numeroSuivi ? `<div class="msg-track">Colis ${m.numeroSuivi}</div>` : ''}
+      `;
+      card.addEventListener('click', () => openDetail(m));
+      ul.appendChild(card);
+    });
+  }
+
+  function openDetail(m){
+    document.getElementById('dAvatar').textContent = initials(m.nom);
+    document.getElementById('dName').textContent = m.nom || 'Client';
+    document.getElementById('dPhone').textContent = m.telephone || '—';
+    document.getElementById('dBody').textContent = m.message || '';
+
+    const tel = (m.telephone || '').replace(/[^0-9+]/g, '');
+    document.getElementById('dCallBtn').href = tel ? 'tel:' + tel : '#';
+    document.getElementById('dWhatsappBtn').href = tel ? 'https://wa.me/' + tel.replace('+','') : '#';
+
+    document.getElementById('overlay').classList.add('show');
+    document.getElementById('detail').classList.add('show');
+
+    if(!m.lu){
+      db.collection('messages').doc(m.id).update({ lu: true }).then(() => {
+        m.lu = true;
+        render();
+      }).catch(err => console.warn("Impossible de marquer comme lu :", err));
+    }
+  }
+
+  function closeDetail(){
+    document.getElementById('overlay').classList.remove('show');
+    document.getElementById('detail').classList.remove('show');
+  }
+  document.getElementById('closeDetail').addEventListener('click', closeDetail);
+  document.getElementById('overlay').addEventListener('click', closeDetail);
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      render();
+    });
+  });
+</script>
+
+</body>
+</html>
