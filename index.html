@@ -136,6 +136,36 @@
   .step:not(.done):not(.active) .txt .title{color:#8f8a72;}
   .step .txt .date{font-family:'IBM Plex Mono',monospace; font-size:12px; color:#6b6752; margin-top:2px;}
 
+  .contact-section{max-width:520px; margin:0 auto 24px;}
+  .contact-section h2{
+    font-size:19px; text-align:center; margin:0 0 6px; font-weight:700;
+  }
+  .contact-section .sub{text-align:center; color:var(--text-dim); font-size:13.5px; margin:0 0 22px;}
+  .contact-card{
+    background:var(--navy-panel); border:1px solid var(--line); border-radius:14px; padding:22px;
+  }
+  .contact-field{margin-bottom:14px;}
+  .contact-field label{
+    display:block; font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.1em; color:var(--text-dim); margin-bottom:6px;
+  }
+  .contact-field input, .contact-field textarea{
+    width:100%; background:var(--navy-deep); border:1px solid var(--line); border-radius:9px;
+    color:var(--text-light); font-family:'Space Grotesk',sans-serif; font-size:14.5px;
+    padding:11px 13px; outline:none; resize:vertical;
+  }
+  .contact-field input:focus, .contact-field textarea:focus{border-color:var(--gold);}
+  .contact-field textarea{min-height:90px;}
+  .contact-submit{
+    width:100%; background:var(--gold); color:var(--navy-deep); border:none; border-radius:9px;
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15px; padding:13px; cursor:pointer;
+  }
+  .contact-submit:hover{background:var(--gold-bright);}
+  .contact-submit:disabled{opacity:0.6; cursor:not-allowed;}
+  .contact-status{text-align:center; font-size:13.5px; margin-top:12px; min-height:18px;}
+  .contact-status.ok{color:var(--teal);}
+  .contact-status.err{color:var(--red);}
+
   footer{
     border-top:1px solid var(--line); padding:36px 24px 40px; margin-top:40px;
     display:flex; flex-wrap:wrap; gap:20px; justify-content:space-between; align-items:center;
@@ -203,6 +233,33 @@
         <div><div class="lbl">Trajet</div><div class="val" id="rBureau">—</div></div>
       </div>
       <div class="timeline" id="rTimeline"></div>
+    </div>
+  </section>
+</div>
+
+<div class="wrap">
+  <section class="contact-section">
+    <h2>Une question sur un colis ?</h2>
+    <p class="sub">Écrivez-nous, nous vous répondons rapidement.</p>
+    <div class="contact-card">
+      <div class="contact-field">
+        <label for="cNom">Nom</label>
+        <input id="cNom" type="text" placeholder="Votre nom" autocomplete="name">
+      </div>
+      <div class="contact-field">
+        <label for="cTel">Téléphone</label>
+        <input id="cTel" type="tel" placeholder="+224 6XX XXX XXX" autocomplete="tel">
+      </div>
+      <div class="contact-field">
+        <label for="cNum">Numéro de suivi (si concerné)</label>
+        <input id="cNum" type="text" placeholder="ex : EVD078740">
+      </div>
+      <div class="contact-field">
+        <label for="cMsg">Message</label>
+        <textarea id="cMsg" placeholder="Votre question ou demande"></textarea>
+      </div>
+      <button class="contact-submit" id="contactSubmit" type="button">Envoyer</button>
+      <div class="contact-status" id="contactStatus"></div>
     </div>
   </section>
 </div>
@@ -378,9 +435,56 @@ document.getElementById("trackInput").addEventListener("keydown", e => { if (e.k
   const num = new URLSearchParams(window.location.search).get("num");
   if (num) {
     document.getElementById("trackInput").value = num;
+    document.getElementById("cNum").value = num;
     handleTrack();
   }
 })();
+
+// Formulaire "Nous écrire" — envoie dans la collection Firestore "messages",
+// lue par l'Inbox du dashboard interne.
+document.getElementById("contactSubmit").addEventListener("click", async () => {
+  const nom = document.getElementById("cNom").value.trim();
+  const telephone = document.getElementById("cTel").value.trim();
+  const numeroSuivi = normalize(document.getElementById("cNum").value);
+  const message = document.getElementById("cMsg").value.trim();
+  const status = document.getElementById("contactStatus");
+  const btn = document.getElementById("contactSubmit");
+
+  status.className = "contact-status";
+  if (!nom || !telephone || !message) {
+    status.textContent = "Merci de renseigner votre nom, téléphone et message.";
+    status.classList.add("err");
+    return;
+  }
+  if (!db) {
+    status.textContent = "Envoi indisponible pour le moment (configuration en cours).";
+    status.classList.add("err");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Envoi…";
+  try {
+    await db.collection("messages").add({
+      nom, telephone, message,
+      numeroSuivi: numeroSuivi || null,
+      lu: false,
+      dateCreation: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    status.textContent = "Message envoyé. Nous vous répondrons rapidement.";
+    status.classList.add("ok");
+    document.getElementById("cNom").value = "";
+    document.getElementById("cTel").value = "";
+    document.getElementById("cMsg").value = "";
+  } catch (e) {
+    console.error("Erreur envoi message :", e);
+    status.textContent = "Erreur d'envoi. Réessayez, ou appelez-nous directement.";
+    status.classList.add("err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Envoyer";
+  }
+});
 </script>
 </body>
 </html>
