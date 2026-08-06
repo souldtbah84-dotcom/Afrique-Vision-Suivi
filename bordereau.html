@@ -3,8 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Africa Vision · Bordereau</title>
-
+<title>Africa Vision · Bordereaux</title>
+<link rel="manifest" href="manifest-admin.json">
+<meta name="theme-color" content="#0f2142">
+<link rel="apple-touch-icon" href="icon-192-interne.png">
+<link rel="icon" href="icon-192-interne.png">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -17,9 +20,10 @@
     --cream:#f6f1e6; --paper:#fffdf8; --gold:#c99a3c; --gold-light:#e6c876;
     --ink:#0f1b2d; --slate:#5c6b83; --slate-light:#93a1b8; --line:#e7e1d2;
     --red-flag:#c8342f; --yellow-flag:#f2b632; --green-flag:#1e7a46; --blue-status:#2b5fb0;
-    --radius:16px;
+    --error-bg:#fdecec; --error-text:#a32621; --radius:16px;
   }
   *{box-sizing:border-box;}
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.01ms !important; transition-duration:.01ms !important;} }
   html,body{margin:0; background:var(--cream); font-family:'Inter',system-ui,sans-serif; color:var(--ink);}
   a{color:inherit; text-decoration:none;} button{font-family:inherit;}
 
@@ -30,56 +34,86 @@
   .iconbtn:hover{background:var(--cream);}
   .head-title{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15.5px;}
   .head-sub{font-size:11.5px; color:var(--slate-light);}
+  .head-cta{margin-left:auto; background:linear-gradient(160deg, var(--navy-700), var(--navy-900)); color:#fff; border:none; border-radius:10px; padding:9px 13px; font-weight:600; font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;}
 
-  main{max-width:640px; margin:0 auto; padding:22px 18px 60px;}
+  main{max-width:680px; margin:0 auto; padding:18px 18px 50px;}
 
-  .doc{background:var(--paper); border-radius:var(--radius); overflow:hidden; box-shadow:0 20px 40px -20px rgba(4,10,25,.35);}
-  .doc-head{padding:26px 26px 20px; border-bottom:3px solid var(--navy-900); display:flex; justify-content:space-between; align-items:flex-start; gap:14px;}
-  .doc-brand{display:flex; align-items:center; gap:11px;}
-  .doc-mark{width:42px; height:42px; border-radius:11px; background:linear-gradient(145deg, var(--gold-light), var(--gold)); display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; color:var(--navy-950); flex:none;}
-  .doc-brand-name{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px;}
-  .doc-brand-sub{font-size:11px; color:var(--slate-light);}
-  .doc-title-block{text-align:right;}
-  .doc-title{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; color:var(--navy-900); letter-spacing:.03em;}
-  .doc-num{font-size:12.5px; color:var(--gold); font-weight:700; margin-top:3px;}
+  .kpi-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:20px;}
+  .kpi{position:relative; background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:12px 10px 11px 13px; overflow:hidden;}
+  .kpi::before{content:""; position:absolute; left:0; top:0; bottom:0; width:5px;}
+  .kpi.total::before{background:var(--navy-800);}
+  .kpi.brouillon::before{background:var(--slate-light);}
+  .kpi.valide::before{background:var(--gold);}
+  .kpi.recu::before{background:var(--green-flag);}
+  .kpi-label{font-size:9px; text-transform:uppercase; letter-spacing:.04em; color:var(--slate); font-weight:600; margin-bottom:5px;}
+  .kpi-value{font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700;}
+  .kpi-value.skeleton{width:28px; height:16px; border-radius:6px; background:linear-gradient(90deg,#eee,#f6f6f6,#eee); background-size:200% 100%; animation:shimmer 1.3s infinite;}
+  @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
 
-  .doc-body{padding:22px 26px;}
-  .info-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:22px;}
-  .info-box{background:var(--cream); border-radius:10px; padding:12px 14px;}
-  .info-box .l{font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--slate-light); margin-bottom:4px;}
-  .info-box .v{font-weight:700; font-size:14px;}
+  .statut-pill{font-size:10px; font-weight:700; padding:3px 9px; border-radius:999px; white-space:nowrap;}
+  .b-num .statut-pill{margin-left:7px; vertical-align:middle;}
+  .statut-pill.brouillon{background:#eceae4; color:var(--slate);}
+  .statut-pill.valide{background:#fdf2de; color:#a9780f;}
+  .statut-pill.recu{background:#e8f6ee; color:var(--green-flag);}
 
-  table{width:100%; border-collapse:collapse; margin-bottom:16px; font-size:12.5px;}
-  thead th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--slate-light); padding:8px 6px; border-bottom:2px solid var(--line);}
-  thead th.num{text-align:right;}
-  tbody td{padding:9px 6px; border-bottom:1px solid var(--line);}
-  tbody td.num{text-align:right; font-weight:600;}
-  .status-pill{font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px;}
-  .status-pill.en_attente{background:#fdf2de; color:#a9780f;}
-  .status-pill.en_transit{background:#e9f0fc; color:var(--blue-status);}
-  .status-pill.livre{background:#e8f6ee; color:var(--green-flag);}
+  .list-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .list-head h2{font-family:'Space Grotesk',sans-serif; font-size:15px; margin:0;}
 
-  .doc-totals{margin-left:auto; width:220px;}
-  .doc-totals .row{display:flex; justify-content:space-between; padding:6px 0; font-size:13px;}
-  .doc-totals .row.grand{border-top:2px solid var(--navy-900); margin-top:6px; padding-top:10px; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px;}
+  .b-list{display:flex; flex-direction:column; gap:10px;}
+  .b-card{background:var(--paper); border:1px solid var(--line); border-radius:13px; padding:15px 16px; display:flex; align-items:center; gap:13px;}
+  .b-icon{width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex:none; font-size:18px;}
+  .b-icon.maritime{background:#e9f0fc; color:var(--blue-status);}
+  .b-icon.aerien{background:#fdf2de; color:#a9780f;}
+  .b-main{flex:1; min-width:0;}
+  .b-num{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14px;}
+  .b-sub{font-size:12px; color:var(--slate-light);}
+  .b-count{flex:none; text-align:right;}
+  .b-count .n{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; color:var(--navy-800);}
+  .b-count .l{font-size:10px; color:var(--slate-light); text-transform:uppercase;}
 
-  .doc-sign{display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:32px;}
-  .doc-sign .box{text-align:center;}
-  .doc-sign .line{border-top:1px solid var(--slate-light); margin-top:44px; padding-top:6px; font-size:11px; color:var(--slate-light);}
+  .empty-state, .error-state{text-align:center; padding:40px 20px; background:var(--paper); border:1px dashed var(--line); border-radius:14px; color:var(--slate);}
+  .error-state{border-color:#f3c6c4; background:var(--error-bg); color:var(--error-text); border-style:solid;}
 
-  .actions-bar{display:flex; gap:10px; margin-top:18px;}
-  .btn{border:none; border-radius:11px; padding:13px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13.5px; cursor:pointer; flex:1; display:flex; align-items:center; justify-content:center; gap:7px;}
-  .btn-primary{background:linear-gradient(160deg, var(--navy-700), var(--navy-900)); color:#fff;}
-  .btn-wa{background:#25D366; color:#fff;}
+  /* MODAL */
+  .modal-overlay{position:fixed; inset:0; background:rgba(10,24,48,.5); z-index:50; display:none; align-items:flex-end; justify-content:center;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--paper); width:100%; max-width:520px; max-height:88vh; overflow-y:auto; border-radius:20px 20px 0 0; padding:22px 20px calc(22px + env(safe-area-inset-bottom)); animation:slideUp .22s ease both;}
+  @media (min-width:600px){ .modal-overlay{align-items:center;} .modal{border-radius:18px;} }
+  @keyframes slideUp{from{transform:translateY(24px); opacity:0;} to{transform:translateY(0); opacity:1;}}
+  .modal-head{display:flex; align-items:center; margin-bottom:16px;}
+  .modal-head .t{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px;}
+  .modal-close{margin-left:auto; background:var(--cream); border:none; width:32px; height:32px; border-radius:9px; cursor:pointer; color:var(--slate); display:flex; align-items:center; justify-content:center;}
+  .field{margin-bottom:14px;}
+  label{display:block; font-size:12.5px; font-weight:600; color:var(--slate); margin-bottom:6px;}
+  .input-shell{display:flex; align-items:center; border:1.5px solid #e3ddcd; border-radius:11px; background:#fff;}
+  .input-shell:focus-within{border-color:var(--navy-700); box-shadow:0 0 0 3px rgba(30,63,120,.12);}
+  input, select{width:100%; border:none; outline:none; background:transparent; padding:12px; font-size:14.5px; font-family:inherit; color:var(--ink);}
+  .colis-check-list{display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto; border:1px solid var(--line); border-radius:11px; padding:10px;}
+  .colis-check{display:flex; align-items:center; gap:10px; padding:8px; border-radius:8px;}
+  .colis-check:hover{background:var(--cream);}
+  .colis-check input{width:18px; height:18px; flex:none; accent-color:var(--navy-700);}
+  .colis-check .cc-track{font-weight:700; font-size:13px;}
+  .colis-check .cc-sub{font-size:11.5px; color:var(--slate-light);}
 
-  .loading-state, .error-state{text-align:center; padding:60px 20px; color:var(--slate);}
-
-  @media print{
-    header, .actions-bar{display:none !important;}
-    body{background:#fff;}
-    main{padding:0; max-width:100%;}
-    .doc{box-shadow:none; border:1px solid #ddd;}
-  }
+  .picker-search{display:flex; align-items:center; gap:8px; background:#fff; border:1.5px solid #e3ddcd; border-radius:10px; padding:0 11px; margin-bottom:8px;}
+  .picker-search input{padding:9px 0; font-size:13.5px;}
+  .picker-toolbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .picker-toolbar button{background:none; border:none; color:var(--navy-700); font-weight:600; font-size:12.5px; cursor:pointer; padding:0;}
+  .picker-stats{font-size:11.5px; color:var(--slate-light);}
+  .picker-table{width:100%; border-collapse:collapse; font-size:12px;}
+  .picker-table thead th{position:sticky; top:0; background:var(--paper); text-align:left; font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--slate-light); padding:6px 5px; border-bottom:1.5px solid var(--line);}
+  .picker-table thead th.num{text-align:right;}
+  .picker-table tbody td{padding:8px 5px; border-bottom:1px solid var(--line); vertical-align:top;}
+  .picker-table tbody td.num{text-align:right; white-space:nowrap;}
+  .picker-table tbody tr:hover{background:var(--cream);}
+  .picker-table input[type=checkbox]{width:16px; height:16px; accent-color:var(--navy-700);}
+  .picker-track{font-weight:700;}
+  .picker-sub{font-size:10.5px; color:var(--slate-light);}
+  .btn{border:none; border-radius:11px; padding:13px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:14.5px; cursor:pointer; width:100%; background:linear-gradient(160deg, var(--navy-700), var(--navy-900)); color:#fff;}
+  .btn:disabled{opacity:.6;}
+  .alert{display:none; background:var(--error-bg); color:var(--error-text); border:1px solid #f3c6c4; border-radius:10px; padding:10px 12px; font-size:13px; margin-bottom:14px;}
+  .alert.show{display:block;}
+  .sel-count{font-size:12px; color:var(--slate); margin:8px 0 14px;}
 </style>
 </head>
 <body>
@@ -87,19 +121,79 @@
 <header>
   <div class="flagbar"></div>
   <div class="headrow">
-    <a class="iconbtn" href="bordereaux.html" aria-label="Retour">
+    <a class="iconbtn" href="dashboard.html" aria-label="Retour">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </a>
     <div>
-      <div class="head-title">Bordereau</div>
-      <div class="head-sub">Manifeste d'expédition</div>
+      <div class="head-title">Bordereaux</div>
+      <div class="head-sub" id="headCount">Chargement…</div>
     </div>
+    <button class="head-cta" id="newBordereauBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      Nouveau
+    </button>
   </div>
 </header>
 
-<main id="mainContent">
-  <div class="loading-state" id="loadingState">Chargement du bordereau…</div>
+<main>
+
+  <div class="kpi-grid">
+    <div class="kpi total"><div class="kpi-label">Total</div><div class="kpi-value skeleton" id="kpiTotal"></div></div>
+    <div class="kpi brouillon"><div class="kpi-label">Brouillons</div><div class="kpi-value skeleton" id="kpiBrouillon"></div></div>
+    <div class="kpi valide"><div class="kpi-label">Validés</div><div class="kpi-value skeleton" id="kpiValide"></div></div>
+    <div class="kpi recu"><div class="kpi-label">Reçus</div><div class="kpi-value skeleton" id="kpiRecu"></div></div>
+  </div>
+
+  <div class="list-head"><h2>Liste des bordereaux</h2></div>
+  <div class="b-list" id="bList"></div>
+
 </main>
+
+<!-- MODAL NOUVEAU BORDEREAU -->
+<div class="modal-overlay" id="createOverlay">
+  <div class="modal">
+    <div class="modal-head"><span class="t">Nouveau bordereau</span>
+      <button class="modal-close" id="createClose"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="alert" id="createAlert"></div>
+
+    <div class="field">
+      <label>Mode de transport *</label>
+      <div class="input-shell"><select id="b_mode">
+        <option value="Maritime">🚢 Maritime</option>
+        <option value="Aérien">✈️ Aérien</option>
+      </select></div>
+    </div>
+    <div class="field">
+      <label>Référence (n° conteneur / n° vol) — optionnel</label>
+      <div class="input-shell"><input type="text" id="b_reference" placeholder="Ex : MSCU1234567 ou AF718"></div>
+    </div>
+    <div class="field">
+      <label>Transporteur</label>
+      <div class="input-shell"><input type="text" id="b_transporteur" placeholder="Ex : Maersk, Air France Cargo..."></div>
+    </div>
+    <div class="field">
+      <label>Date de départ *</label>
+      <div class="input-shell"><input type="date" id="b_date"></div>
+    </div>
+
+    <div class="field">
+      <label>Colis à inclure (en attente uniquement)</label>
+      <div class="picker-search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m21 21-4.3-4.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input type="text" id="colisSearch" placeholder="Rechercher par code ou destinataire…">
+      </div>
+      <div class="picker-toolbar">
+        <button type="button" id="toggleAllBtn">Tout sélectionner</button>
+        <span class="picker-stats" id="pickerStats">0 colis disponibles</span>
+      </div>
+      <div class="colis-check-list" id="colisCheckList" style="padding:0;"></div>
+      <div class="sel-count" id="selCount">0 colis sélectionné(s) · 0.0 kg</div>
+    </div>
+
+    <button class="btn" id="createSaveBtn">Créer le bordereau</button>
+  </div>
+</div>
 
 <script>
   // ============================================================
@@ -114,117 +208,252 @@
     appId: "1:233363053035:web:6a5ef497fbf0991216e1ae"
   };
   const REQUIRE_AUTH = true;
-  const LOGIN_URL = "index.html";
+  const LOGIN_URL = "connexion.html";
 
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.firestore();
 
-  const fmtDate = ts => {
-    if(!ts) return '—';
-    const d = ts.toDate ? ts.toDate() : new Date(ts);
-    return d.toLocaleDateString('fr-FR');
-  };
-  const statusLabel = c => ({en_attente:'En attente', en_transit:'En transit', livre:'Livré'}[c] || c);
+  const fmtDate = ts => { if(!ts) return '—'; const d = ts.toDate ? ts.toDate() : new Date(ts); return d.toLocaleDateString('fr-FR'); };
 
-  const bordereauId = new URLSearchParams(window.location.search).get('id');
+  let allBordereaux = [];
+  let waitingColis = [];
+  let selectedColisIds = new Set();
 
-  auth.onAuthStateChanged(user => {
-    if(user){ init(); }
-    else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
-    else { init(); }
-  });
-
-  async function init(){
-    if(!bordereauId){
-      document.getElementById('mainContent').innerHTML = '<div class="error-state">Aucun bordereau spécifié.</div>';
-      return;
-    }
+  async function checkModuleAccess(moduleKey){
     try{
-      const doc = await db.collection('bordereaux').doc(bordereauId).get();
-      if(!doc.exists){
-        document.getElementById('mainContent').innerHTML = '<div class="error-state">Ce bordereau est introuvable.</div>';
+      const snap = await db.collection('utilisateurs').where('email', '==', auth.currentUser.email).limit(1).get();
+      if(snap.empty) return true;
+      const u = snap.docs[0].data();
+      if(u.role === 'dga') return true;
+      if(u.statut === 'inactif') return false;
+      if(!u.permissions) return true;
+      return u.permissions[moduleKey] !== false;
+    }catch(e){
+      console.warn("Vérification des permissions impossible, accès autorisé par défaut", e);
+      return true;
+    }
+  }
+
+  auth.onAuthStateChanged(async user => {
+    if(user){
+      const allowed = await checkModuleAccess('bordereaux');
+      if(!allowed){
+        alert("Tu n'as pas la permission d'accéder au module Bordereaux.");
+        window.location.href = "dashboard.html";
         return;
       }
-      const data = doc.data();
-      const colisIds = data.colisIds || [];
-      const colisDocs = await Promise.all(colisIds.map(id => db.collection('colis').doc(id).get()));
-      const colisList = colisDocs.filter(d => d.exists).map(d => ({id:d.id, data:d.data()}));
-      render(data, colisList);
-    }catch(err){
-      console.error(err);
-      document.getElementById('mainContent').innerHTML = '<div class="error-state">Impossible de charger le bordereau. Vérifie la configuration Firebase.</div>';
+      window._currentUser = user;
+      loadBordereaux();
+      loadWaitingColis();
     }
-  }
+    else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
+    else { loadBordereaux(); loadWaitingColis(); }
+  });
 
-  function render(b, colisList){
-    const poidsTotal = colisList.reduce((s,c) => s + (c.data.poidsTotal||0), 0);
-    const isMaritime = b.mode === 'Maritime';
-
-    document.getElementById('mainContent').innerHTML = `
-      <div class="doc">
-        <div class="doc-head">
-          <div class="doc-brand">
-            <div class="doc-mark">AV</div>
-            <div><div class="doc-brand-name">Africa Vision Multiservices</div><div class="doc-brand-sub">Conakry, Guinée</div></div>
-          </div>
-          <div class="doc-title-block">
-            <div class="doc-title">${isMaritime?'🚢':'✈️'} BORDEREAU ${b.mode?.toUpperCase()||''}</div>
-            <div class="doc-num">${b.numeroBordereau||bordereauId}</div>
-          </div>
-        </div>
-
-        <div class="doc-body">
-          <div class="info-grid">
-            <div class="info-box"><div class="l">Référence</div><div class="v">${b.reference||'—'}</div></div>
-            <div class="info-box"><div class="l">Transporteur</div><div class="v">${b.transporteur||'—'}</div></div>
-            <div class="info-box"><div class="l">Date de départ</div><div class="v">${fmtDate(b.dateDepart)}</div></div>
-            <div class="info-box"><div class="l">Nombre de colis</div><div class="v">${colisList.length}</div></div>
-          </div>
-
-          <table>
-            <thead>
-              <tr><th>N° Suivi</th><th>Destinataire</th><th>Destination</th><th class="num">Poids</th><th>Statut</th></tr>
-            </thead>
-            <tbody>
-              ${colisList.map(c => {
-                const dest = c.data.destinataire || {};
-                const route = c.data.route || {};
-                const statut = c.data.statut || 'en_attente';
-                return `<tr>
-                  <td><strong>${c.data.numeroSuivi||c.id}</strong></td>
-                  <td>${[dest.prenom,dest.nom].filter(Boolean).join(' ')||'—'}</td>
-                  <td>${route.arrivee||'—'}</td>
-                  <td class="num">${(c.data.poidsTotal||0).toFixed(1)} kg</td>
-                  <td><span class="status-pill ${statut}">${statusLabel(statut)}</span></td>
-                </tr>`;
-              }).join('')}
-            </tbody>
-          </table>
-
-          <div class="doc-totals">
-            <div class="row grand"><span>Poids total</span><span>${poidsTotal.toFixed(1)} kg</span></div>
-          </div>
-
-          <div class="doc-sign">
-            <div class="box"><div class="line">Signature agent Africa Vision</div></div>
-            <div class="box"><div class="line">Signature transporteur</div></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="actions-bar">
-        <button class="btn btn-primary" id="printBtn">🖨️ Imprimer / PDF</button>
-        <button class="btn btn-wa" id="waBtn">📤 WhatsApp</button>
-      </div>
-    `;
-
-    document.getElementById('printBtn').addEventListener('click', () => window.print());
-    document.getElementById('waBtn').addEventListener('click', () => {
-      const msg = `Bordereau Africa Vision\n${b.numeroBordereau||bordereauId}\nMode : ${b.mode||''}\nRéférence : ${b.reference||''}\nDépart : ${fmtDate(b.dateDepart)}\nColis : ${colisList.length}\nPoids total : ${poidsTotal.toFixed(1)} kg`;
-      window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
+  function loadBordereaux(){
+    db.collection('bordereaux').get().then(snap => {
+      allBordereaux = snap.docs.map(d => ({id:d.id, data:d.data()}));
+      renderKPIs();
+      renderList();
+    }).catch(err => {
+      console.error(err);
+      document.getElementById('bList').innerHTML = `
+        <div class="error-state"><p><strong>Impossible de charger les bordereaux.</strong></p><p>Vérifie la configuration Firebase et les règles Firestore.</p></div>`;
+      document.getElementById('headCount').textContent = "Erreur de chargement";
     });
   }
+
+  function loadWaitingColis(){
+    db.collection('colis').where('statut', '==', 'en_attente').get().then(snap => {
+      waitingColis = snap.docs.map(d => ({id:d.id, data:d.data()})).filter(c => !c.data.bordereauId);
+      renderCheckList();
+      renderKPIs();
+    }).catch(err => console.error(err));
+  }
+
+  function statutOf(b){ return b.statutBordereau || 'valide'; } // bordereaux créés avant cette mise à jour = considérés validés
+
+  function renderKPIs(){
+    const brouillons = allBordereaux.filter(b => statutOf(b.data) === 'brouillon').length;
+    const valides = allBordereaux.filter(b => statutOf(b.data) === 'valide').length;
+    const recus = allBordereaux.filter(b => statutOf(b.data) === 'recu').length;
+    document.getElementById('kpiTotal').textContent = allBordereaux.length;
+    document.getElementById('kpiBrouillon').textContent = brouillons;
+    document.getElementById('kpiValide').textContent = valides;
+    document.getElementById('kpiRecu').textContent = recus;
+    document.querySelectorAll('.kpi-value').forEach(el => el.classList.remove('skeleton'));
+    document.getElementById('headCount').textContent = allBordereaux.length + " bordereau(x) · " + waitingColis.length + " colis à affecter";
+  }
+
+  function renderList(){
+    const container = document.getElementById('bList');
+    if(allBordereaux.length === 0){
+      container.innerHTML = '<div class="empty-state"><p><strong>Aucun bordereau créé pour l\u2019instant.</strong></p></div>';
+      return;
+    }
+    const sorted = [...allBordereaux].sort((a,b) => {
+      const ta = a.data.dateCreation && a.data.dateCreation.toMillis ? a.data.dateCreation.toMillis() : 0;
+      const tb = b.data.dateCreation && b.data.dateCreation.toMillis ? b.data.dateCreation.toMillis() : 0;
+      return tb-ta;
+    });
+    container.innerHTML = '';
+    sorted.forEach(({id, data}) => {
+      const isMaritime = data.mode === 'Maritime';
+      const s = statutOf(data);
+      const statutLabel = {brouillon:'Brouillon', valide:'Validé', recu:'Reçu'}[s];
+      const row = document.createElement('a');
+      row.href = 'bordereau.html?id=' + id;
+      row.className = 'b-card';
+      row.innerHTML = `
+        <div class="b-icon ${isMaritime?'maritime':'aerien'}">${isMaritime?'🚢':'✈️'}</div>
+        <div class="b-main">
+          <div class="b-num">${data.numeroBordereau || id} <span class="statut-pill ${s}">${statutLabel}</span></div>
+          <div class="b-sub">${[data.reference, fmtDate(data.dateDepart)].filter(Boolean).join(' · ')}</div>
+        </div>
+        <div class="b-count"><div class="n">${(data.colisIds||[]).length}</div><div class="l">colis</div></div>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  function updateSelStats(){
+    const selected = waitingColis.filter(c => selectedColisIds.has(c.id));
+    const poids = selected.reduce((s,c) => s + (c.data.poidsTotal||0), 0);
+    document.getElementById('selCount').textContent = selected.length + " colis sélectionné(s) · " + poids.toFixed(1) + " kg";
+    document.getElementById('toggleAllBtn').textContent = (selectedColisIds.size > 0 && selectedColisIds.size === visibleColisIds().length) ? "Tout désélectionner" : "Tout sélectionner";
+  }
+
+  function visibleColisIds(){
+    return Array.from(document.querySelectorAll('#colisCheckList input[type=checkbox]')).map(el => el.value);
+  }
+
+  function renderCheckList(){
+    const box = document.getElementById('colisCheckList');
+    const q = (document.getElementById('colisSearch').value || '').trim().toLowerCase();
+    const filtered = waitingColis.filter(({data}) => {
+      if(!q) return true;
+      const dest = data.destinataire || {};
+      return (data.numeroSuivi||'').toLowerCase().includes(q) || (dest.nom||'').toLowerCase().includes(q) || (dest.prenom||'').toLowerCase().includes(q);
+    });
+
+    document.getElementById('pickerStats').textContent = filtered.length + " colis disponible(s)";
+
+    if(filtered.length === 0){
+      box.innerHTML = '<p style="font-size:12.5px; color:var(--slate-light); padding:10px;">Aucun colis en attente à affecter.</p>';
+      updateSelStats();
+      return;
+    }
+
+    box.innerHTML = `<table class="picker-table">
+      <thead><tr><th></th><th>Code</th><th>Trajet</th><th>Mode</th><th class="num">Poids</th><th class="num">Frais</th></tr></thead>
+      <tbody id="colisCheckBody"></tbody>
+    </table>`;
+    const tbody = document.getElementById('colisCheckBody');
+
+    filtered.forEach(({id, data}) => {
+      const dest = data.destinataire || {};
+      const route = data.route || {};
+      const isMaritime = data.mode === 'maritime';
+      const frais = (data.frais && data.frais.total) || 0;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="checkbox" value="${id}" ${selectedColisIds.has(id)?'checked':''}></td>
+        <td><div class="picker-track">${data.numeroSuivi||id}</div><div class="picker-sub">${[dest.prenom,dest.nom].filter(Boolean).join(' ')||'—'}</div></td>
+        <td class="picker-sub">${(route.depart||'GN')} → ${(route.arrivee||'—')}</td>
+        <td class="picker-sub">${isMaritime?'🚢':'✈️'}</td>
+        <td class="num">${(data.poidsTotal||0).toFixed(1)} kg</td>
+        <td class="num">${frais ? new Intl.NumberFormat('fr-FR').format(Math.round(frais)) + ' GNF' : '—'}</td>
+      `;
+      tr.querySelector('input').addEventListener('change', e => {
+        if(e.target.checked) selectedColisIds.add(id); else selectedColisIds.delete(id);
+        updateSelStats();
+      });
+      tbody.appendChild(tr);
+    });
+
+    updateSelStats();
+  }
+
+  document.getElementById('colisSearch').addEventListener('input', renderCheckList);
+
+  document.getElementById('toggleAllBtn').addEventListener('click', () => {
+    const ids = visibleColisIds();
+    const allSelected = ids.length > 0 && ids.every(id => selectedColisIds.has(id));
+    ids.forEach(id => allSelected ? selectedColisIds.delete(id) : selectedColisIds.add(id));
+    renderCheckList();
+  });
+
+  // ---------------- MODAL CREATION ----------------
+  const createOverlay = document.getElementById('createOverlay');
+  document.getElementById('newBordereauBtn').addEventListener('click', () => {
+    selectedColisIds = new Set();
+    document.getElementById('b_mode').value = 'Maritime';
+    document.getElementById('b_reference').value = '';
+    document.getElementById('b_transporteur').value = '';
+    document.getElementById('b_date').value = '';
+    document.getElementById('colisSearch').value = '';
+    document.getElementById('selCount').textContent = '0 colis sélectionné(s) · 0.0 kg';
+    document.getElementById('createAlert').classList.remove('show');
+    renderCheckList();
+    createOverlay.classList.add('show');
+  });
+  document.getElementById('createClose').addEventListener('click', () => createOverlay.classList.remove('show'));
+  createOverlay.addEventListener('click', e => { if(e.target === createOverlay) createOverlay.classList.remove('show'); });
+
+  function genBordereauNumber(){
+    const year = new Date().getFullYear();
+    const num = Math.floor(1000 + Math.random()*9000);
+    return "BRD-" + year + "-" + num;
+  }
+
+  document.getElementById('createSaveBtn').addEventListener('click', async () => {
+    const mode = document.getElementById('b_mode').value;
+    const reference = document.getElementById('b_reference').value.trim();
+    const transporteur = document.getElementById('b_transporteur').value.trim();
+    const dateStr = document.getElementById('b_date').value;
+    const alertBox = document.getElementById('createAlert');
+
+    if(!dateStr){
+      alertBox.textContent = "Merci de renseigner au moins la date de départ.";
+      alertBox.classList.add('show');
+      return;
+    }
+    if(selectedColisIds.size === 0){
+      alertBox.textContent = "Sélectionne au moins un colis à inclure dans ce bordereau.";
+      alertBox.classList.add('show');
+      return;
+    }
+
+    const btn = document.getElementById('createSaveBtn');
+    btn.disabled = true; btn.textContent = "Création…";
+    try{
+      const colisIds = Array.from(selectedColisIds);
+      const numeroBordereau = genBordereauNumber();
+      const bordereauRef = await db.collection('bordereaux').add({
+        numeroBordereau, mode, reference, transporteur,
+        dateDepart: new Date(dateStr),
+        colisIds,
+        statutBordereau: 'brouillon',
+        dateCreation: firebase.firestore.FieldValue.serverTimestamp(),
+        creePar: window._currentUser ? window._currentUser.uid : null
+      });
+
+      // Réserve chaque colis pour ce bordereau (il n'apparaît plus dans "à affecter")
+      // mais reste "en_attente" tant que le bordereau n'est pas validé.
+      await Promise.all(colisIds.map(id => db.collection('colis').doc(id).update({
+        bordereauId: bordereauRef.id
+      })));
+
+      createOverlay.classList.remove('show');
+      window.location.href = 'bordereau.html?id=' + bordereauRef.id;
+    }catch(err){
+      console.error(err);
+      alertBox.textContent = "Erreur lors de la création. Vérifie les règles Firestore.";
+      alertBox.classList.add('show');
+      btn.disabled = false; btn.textContent = "Créer le bordereau";
+    }
+  });
 </script>
 
 </body>
