@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Africa Vision · Étiquette</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f2142">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -160,7 +165,7 @@
     const route = c.route || {};
     const numeroSuivi = c.numeroSuivi || colisId;
     const nbArticles = (c.produits||[]).reduce((s,p) => s + (Number(p.quantite)||0), 0) || 1;
-    const modeLabel = "AÉRIEN"; // valeur par défaut ; ajuste manuellement si l'envoi est maritime
+    const modeLabel = c.mode === "maritime" ? "MARITIME" : "AÉRIEN";
     // Lien vers la page publique de suivi de colis — adapte si l'adresse change un jour
     const TRACKING_BASE_URL = "https://souldtbah84-dotcom.github.io/Afrique-Vision-Suivi/";
     const trackingLink = TRACKING_BASE_URL + "?num=" + encodeURIComponent(numeroSuivi);
@@ -223,5 +228,13 @@
   }
 </script>
 
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW non enregistré :', err));
+    });
+  }
+</script>
 </body>
 </html>
