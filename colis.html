@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Africa Vision · Colis</title>
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest-admin.json">
 <meta name="theme-color" content="#0f2142">
-<link rel="apple-touch-icon" href="icon-192.png">
-<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192-interne.png">
+<link rel="icon" href="icon-192-interne.png">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -196,6 +196,12 @@
         </select>
         <button id="modalStatusSave">Mettre à jour</button>
       </div>
+      <div class="modal-line" style="margin-top:10px; border-top:1px solid var(--line); padding-top:10px;">
+        <span>Mode d'envoi</span><span id="modalMode">—</span>
+      </div>
+      <div class="modal-line">
+        <span>Trajet</span><span id="modalRoute">—</span>
+      </div>
     </div>
 
     <div class="modal-section">
@@ -250,8 +256,26 @@
   let allDocs = [];   // {id, data}
   let currentDetailId = null;
 
-  auth.onAuthStateChanged(user => {
-    if(user){ loadColis(); }
+  let canDeleteColis = false;
+  async function checkDeletePermission(){
+    try{
+      const snap = await db.collection('utilisateurs').where('email', '==', auth.currentUser.email).limit(1).get();
+      if(snap.empty) return true; // compte non listé = DGA par défaut
+      const u = snap.docs[0].data();
+      if(u.role === 'dga') return true;
+      return (u.permissions && u.permissions.supprimerColis === true);
+    }catch(e){
+      console.warn("Vérification de la permission de suppression impossible", e);
+      return false;
+    }
+  }
+
+  auth.onAuthStateChanged(async user => {
+    if(user){
+      canDeleteColis = await checkDeletePermission();
+      document.getElementById('modalDeleteBtn').style.display = canDeleteColis ? '' : 'none';
+      loadColis();
+    }
     else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
     else { loadColis(); }
   });
@@ -359,6 +383,9 @@
     document.getElementById('modalReceiptLink').href = "recu.html?id=" + id;
     document.getElementById('modalLabelLink').href = "etiquette.html?id=" + id;
     document.getElementById('modalStatusSelect').value = data.statut || 'en_attente';
+    document.getElementById('modalMode').textContent = data.mode === 'maritime' ? '🚢 Maritime' : '✈️ Aérien';
+    const route = data.route || {};
+    document.getElementById('modalRoute').textContent = (route.depart || 'GUINEE') + ' → ' + (route.arrivee || '—');
 
     const dest = data.destinataire || {};
     document.getElementById('modalDest').innerHTML = `
@@ -410,6 +437,7 @@
 
   document.getElementById('modalDeleteBtn').addEventListener('click', async () => {
     if(!currentDetailId) return;
+    if(!canDeleteColis){ alert("Tu n'as pas la permission de supprimer un colis."); return; }
     const target = allDocs.find(d => d.id === currentDetailId);
     const track = target ? (target.data.numeroSuivi || currentDetailId) : currentDetailId;
     if(!confirm("Supprimer définitivement le colis " + track + " et tous ses paiements associés ?\n\nCette action est irréversible.")) return;
