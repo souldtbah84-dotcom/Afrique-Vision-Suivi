@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Africa Vision · Clients</title>
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest-admin.json">
 <meta name="theme-color" content="#0f2142">
-<link rel="apple-touch-icon" href="icon-192.png">
-<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192-interne.png">
+<link rel="icon" href="icon-192-interne.png">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -127,6 +127,9 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
       Nouveau
     </button>
+    <button class="head-cta" id="deleteAllBtn" style="display:none; margin-left:8px; background:#fff; border:1.5px solid #f3c6c4; color:var(--red-flag);">
+      🗑️ Tout supprimer
+    </button>
   </div>
 </header>
 
@@ -170,6 +173,9 @@
     <div class="modal-section">
       <h4>Historique des colis</h4>
       <div id="detailHistory"></div>
+    </div>
+    <div class="modal-section">
+      <button id="deleteClientBtn" style="width:100%; border:1.5px solid #f3c6c4; background:#fff; color:var(--red-flag); border-radius:11px; padding:12px; font-weight:600; font-size:13.5px; cursor:pointer;">🗑️ Supprimer ce client</button>
     </div>
   </div>
 </div>
@@ -222,8 +228,11 @@
 
   let allClients = [];
 
-  auth.onAuthStateChanged(user => {
-    if(user){ loadClients(); }
+  auth.onAuthStateChanged(async user => {
+    if(user){
+      loadClients();
+      if(await isDga()) document.getElementById('deleteAllBtn').style.display = '';
+    }
     else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
     else { loadClients(); }
   });
@@ -318,7 +327,9 @@
 
   // ---------------- DETAIL MODAL ----------------
   const detailOverlay = document.getElementById('detailOverlay');
+  let currentDetailClientId = null;
   function openDetail(id, data){
+    currentDetailClientId = id;
     document.getElementById('detailAvatar').textContent = initials(data.nom, data.prenom);
     document.getElementById('detailName').textContent = [data.prenom, data.nom].filter(Boolean).join(' ') || 'Sans nom';
     document.getElementById('detailContact').innerHTML = `
@@ -413,6 +424,71 @@
       alertBox.classList.add('show');
     }finally{
       btn.disabled = false; btn.textContent = "Ajouter le client";
+    }
+  });
+
+  // ---------------- SUPPRESSION D'UN CLIENT ----------------
+  document.getElementById('deleteClientBtn').addEventListener('click', async () => {
+    if(!currentDetailClientId) return;
+    const client = allClients.find(c => c.id === currentDetailClientId);
+    const name = client ? [client.data.prenom, client.data.nom].filter(Boolean).join(' ') : currentDetailClientId;
+    if(!confirm("Supprimer le client " + name + " ?\n\nCette action est irréversible. Les colis déjà créés pour ce client ne sont PAS supprimés.")) return;
+
+    const btn = document.getElementById('deleteClientBtn');
+    btn.disabled = true; btn.textContent = "Suppression…";
+    try{
+      await db.collection('clients').doc(currentDetailClientId).delete();
+      allClients = allClients.filter(c => c.id !== currentDetailClientId);
+      renderKPIs();
+      applyFilter();
+      detailOverlay.classList.remove('show');
+    }catch(err){
+      console.error(err);
+      alert("Impossible de supprimer ce client. Vérifie les règles Firestore.");
+    }finally{
+      btn.disabled = false; btn.textContent = "🗑️ Supprimer ce client";
+    }
+  });
+
+  // ---------------- SUPPRESSION DE TOUS LES CLIENTS (réservé au DGA) ----------------
+  async function isDga(){
+    try{
+      const snap = await db.collection('utilisateurs').where('email', '==', auth.currentUser.email).limit(1).get();
+      if(snap.empty) return true; // compte non listé = DGA par défaut
+      return snap.docs[0].data().role === 'dga';
+    }catch(e){
+      console.warn("Vérification DGA impossible", e);
+      return false;
+    }
+  }
+
+  document.getElementById('deleteAllBtn').addEventListener('click', async () => {
+    if(allClients.length === 0) return;
+    const first = confirm("Supprimer DÉFINITIVEMENT les " + allClients.length + " clients enregistrés ?\n\nLes colis existants ne sont pas touchés, seule la liste des clients est vidée.");
+    if(!first) return;
+    const typed = prompt("Pour confirmer, tape exactement : SUPPRIMER");
+    if(typed !== "SUPPRIMER") { alert("Suppression annulée."); return; }
+
+    const btn = document.getElementById('deleteAllBtn');
+    btn.disabled = true; btn.textContent = "Suppression…";
+    try{
+      const snap = await db.collection('clients').get();
+      const batches = [];
+      let batch = db.batch(); let count = 0;
+      snap.forEach(doc => {
+        batch.delete(doc.ref); count++;
+        if(count === 450){ batches.push(batch.commit()); batch = db.batch(); count = 0; }
+      });
+      if(count > 0) batches.push(batch.commit());
+      await Promise.all(batches);
+      allClients = [];
+      renderKPIs();
+      applyFilter();
+    }catch(err){
+      console.error(err);
+      alert("Impossible de tout supprimer. Vérifie les règles Firestore.");
+    }finally{
+      btn.disabled = false; btn.textContent = "🗑️ Tout supprimer";
     }
   });
 </script>
