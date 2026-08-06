@@ -3,15 +3,18 @@
 // en direct : ce service worker ne met en cache QUE les fichiers statiques
 // du site (pages, manifest, icônes), jamais les données.
 
-const CACHE_NAME = "av-suivi-v1";
+const CACHE_NAME = "av-suivi-v2";
 const CORE_ASSETS = [
   "./",
   "./index.html",
   "./connexion.html",
   "./dashboard.html",
   "./manifest.json",
+  "./manifest-admin.json",
   "./icon-192.png",
-  "./icon-512.png"
+  "./icon-512.png",
+  "./icon-192-interne.png",
+  "./icon-512-interne.png"
 ];
 
 self.addEventListener("install", (event) => {
