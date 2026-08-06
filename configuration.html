@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Africa Vision · Configuration</title>
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest-admin.json">
 <meta name="theme-color" content="#0f2142">
-<link rel="apple-touch-icon" href="icon-192.png">
-<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192-interne.png">
+<link rel="icon" href="icon-192-interne.png">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -250,6 +250,14 @@
         <label class="perm-check"><input type="checkbox" id="perm_bordereaux" checked> Bordereaux</label>
         <label class="perm-check"><input type="checkbox" id="perm_factures" checked> Factures</label>
         <label class="perm-check"><input type="checkbox" id="perm_configuration" checked> Configuration</label>
+      </div>
+      <div style="margin-top:12px; padding-top:12px; border-top:1px dashed var(--line);">
+        <label class="perm-check" style="border-color:#f3c6c4;">
+          <input type="checkbox" id="perm_supprimerColis"> Autoriser à supprimer un colis
+        </label>
+        <div style="font-size:11.5px; color:var(--slate-light); margin-top:6px; line-height:1.4;">
+          Décochée par défaut pour tout le monde, y compris les nouveaux comptes. Le DGA l'a toujours, quel que soit ce réglage.
+        </div>
       </div>
     </div>
 
@@ -496,6 +504,7 @@
         const u = doc.data();
         const perms = u.permissions || {};
         const activeModules = u.role === 'dga' ? ['Accès total'] : PERM_KEYS.filter(k => perms[k] !== false).map(k => PERM_LABELS[k]);
+        if(u.role !== 'dga' && perms.supprimerColis === true) activeModules.push('🗑️ Suppression colis');
         const row = document.createElement('div');
         row.className = 'item-row';
         row.style.alignItems = 'flex-start';
@@ -529,6 +538,7 @@
     PERM_KEYS.forEach(k => {
       document.getElementById('perm_' + k).checked = perms[k] !== false;
     });
+    document.getElementById('perm_supprimerColis').checked = perms.supprimerColis === true;
 
     document.getElementById('userAlert').classList.remove('show');
     document.getElementById('resetPwdBlock').style.display = id ? 'block' : 'none';
@@ -550,6 +560,7 @@
     }
     const permissions = {};
     PERM_KEYS.forEach(k => { permissions[k] = document.getElementById('perm_' + k).checked; });
+    permissions.supprimerColis = document.getElementById('perm_supprimerColis').checked;
 
     const btn = document.getElementById('userSaveBtn');
     btn.disabled = true;
