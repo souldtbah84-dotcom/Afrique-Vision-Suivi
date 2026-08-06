@@ -1,0 +1,15 @@
+{
+  "name": "Africa Vision - Suivi",
+  "short_name": "AV Suivi",
+  "description": "Suivi de colis et gestion logistique — Africa Vision Multiservices",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b1c2c",
+  "theme_color": "#0f2142",
+  "lang": "fr",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
