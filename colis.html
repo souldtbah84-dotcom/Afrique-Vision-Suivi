@@ -257,23 +257,40 @@
   let currentDetailId = null;
 
   let canDeleteColis = false;
-  async function checkDeletePermission(){
+  let userProfile = { isDga: true, routeAssignee: null }; // par défaut (compte non listé = DGA)
+  async function loadUserProfile(){
     try{
       const snap = await db.collection('utilisateurs').where('email', '==', auth.currentUser.email).limit(1).get();
-      if(snap.empty) return true; // compte non listé = DGA par défaut
+      if(snap.empty) return { isDga: true, routeAssignee: null }; // compte non listé = DGA par défaut
       const u = snap.docs[0].data();
-      if(u.role === 'dga') return true;
-      return (u.permissions && u.permissions.supprimerColis === true);
+      const isDga = u.role === 'dga';
+      return {
+        isDga,
+        canDelete: isDga || (u.permissions && u.permissions.supprimerColis === true),
+        routeAssignee: (!isDga && u.routeAssignee) ? u.routeAssignee : null
+      };
     }catch(e){
-      console.warn("Vérification de la permission de suppression impossible", e);
-      return false;
+      console.warn("Vérification du profil utilisateur impossible", e);
+      return { isDga: false, canDelete: false, routeAssignee: null };
     }
+  }
+
+  // Un utilisateur sans route assignée (ou DGA) peut gérer tous les colis.
+  // Sinon, il faut que départ ET destination du colis correspondent à sa route assignée.
+  function canManageColis(colisData){
+    if(userProfile.isDga) return true;
+    const r = userProfile.routeAssignee;
+    if(!r || (!r.depart && !r.arrivee)) return true;
+    const route = colisData.route || {};
+    const departOk = !r.depart || route.depart === r.depart;
+    const arriveeOk = !r.arrivee || route.arrivee === r.arrivee;
+    return departOk && arriveeOk;
   }
 
   auth.onAuthStateChanged(async user => {
     if(user){
-      canDeleteColis = await checkDeletePermission();
-      document.getElementById('modalDeleteBtn').style.display = canDeleteColis ? '' : 'none';
+      userProfile = await loadUserProfile();
+      canDeleteColis = !!userProfile.canDelete;
       loadColis();
     }
     else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
@@ -387,6 +404,21 @@
     const route = data.route || {};
     document.getElementById('modalRoute').textContent = (route.depart || 'GUINEE') + ' → ' + (route.arrivee || '—');
 
+    const canManage = canManageColis(data);
+    document.getElementById('modalStatusSelect').disabled = !canManage;
+    document.getElementById('modalStatusSave').disabled = !canManage;
+    document.getElementById('modalStatusSave').style.opacity = canManage ? '1' : '0.5';
+    document.getElementById('modalDeleteBtn').style.display = (canDeleteColis && canManage) ? '' : 'none';
+    let restrictNote = document.getElementById('modalRestrictNote');
+    if(!restrictNote){
+      restrictNote = document.createElement('div');
+      restrictNote.id = 'modalRestrictNote';
+      restrictNote.style.cssText = 'font-size:12px; color:var(--slate-light); background:var(--cream); border-radius:8px; padding:8px 10px; margin-top:8px;';
+      document.getElementById('modalStatusSave').insertAdjacentElement('afterend', restrictNote);
+    }
+    restrictNote.style.display = canManage ? 'none' : 'block';
+    restrictNote.textContent = "Ce colis est hors de ta route assignée — consultation seule, tu ne peux pas le modifier ni le supprimer.";
+
     const dest = data.destinataire || {};
     document.getElementById('modalDest').innerHTML = `
       <div class="modal-line"><span>Nom</span><span>${[dest.prenom, dest.nom].filter(Boolean).join(' ') || '—'}</span></div>
@@ -417,13 +449,14 @@
 
   document.getElementById('modalStatusSave').addEventListener('click', async () => {
     if(!currentDetailId) return;
+    const target = allDocs.find(d => d.id === currentDetailId);
+    if(!target || !canManageColis(target.data)){ alert("Ce colis est hors de ta route assignée."); return; }
     const btn = document.getElementById('modalStatusSave');
     const newStatus = document.getElementById('modalStatusSelect').value;
     btn.disabled = true; btn.textContent = "…";
     try{
       await db.collection('colis').doc(currentDetailId).update({statut: newStatus});
-      const target = allDocs.find(d => d.id === currentDetailId);
-      if(target) target.data.statut = newStatus;
+      target.data.statut = newStatus;
       renderKPIs();
       applyFilters();
       modalOverlay.classList.remove('show');
@@ -439,6 +472,7 @@
     if(!currentDetailId) return;
     if(!canDeleteColis){ alert("Tu n'as pas la permission de supprimer un colis."); return; }
     const target = allDocs.find(d => d.id === currentDetailId);
+    if(!target || !canManageColis(target.data)){ alert("Ce colis est hors de ta route assignée."); return; }
     const track = target ? (target.data.numeroSuivi || currentDetailId) : currentDetailId;
     if(!confirm("Supprimer définitivement le colis " + track + " et tous ses paiements associés ?\n\nCette action est irréversible.")) return;
 
