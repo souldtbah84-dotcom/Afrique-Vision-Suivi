@@ -189,7 +189,7 @@
 
   <div id="wizardWrap">
     <div class="route-bar">
-      <span class="lbl">Envoi de</span> <strong>GUINÉE</strong> <span class="lbl">vers</span>
+      <span class="lbl">Envoi de</span> <strong id="departLabel">GUINÉE</strong> <span class="lbl">vers</span>
       <select id="destSelect"></select>
     </div>
     <div class="route-note">Modifiable uniquement au début de la saisie</div>
@@ -317,7 +317,7 @@
       <div class="card">
         <div class="field">
           <label>Frais de base (calculé selon poids × catégorie)</label>
-          <div class="fee-box"><div class="row"><span>Frais de base :</span><strong id="feeBaseDisplay">0 GNF</strong></div></div>
+          <div class="fee-box"><div class="row"><span id="feeBaseLabel">Frais de base :</span><strong id="feeBaseDisplay">0 GNF</strong></div></div>
         </div>
         <div class="field">
           <label>Rabais appliqué (GNF)</label>
@@ -368,7 +368,7 @@
       </div>
 
       <div class="route-bar" style="justify-content:center; gap:14px;">
-        <span>🇬🇳 GUINÉE</span> → <span id="summaryDestFlag">🌍 —</span>
+        <span id="summaryDepartFlag">🇬🇳 GUINÉE</span> → <span id="summaryDestFlag">🌍 —</span>
         <span id="summaryModeBadge" style="font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px; background:var(--cream);">✈️ Aérien</span>
       </div>
 
@@ -428,6 +428,7 @@
 
   // Taux par défaut si aucun taux n'est défini dans Configuration > Routes & Tarifs
   let GNF_PER_USD = 9345;
+  let TARIF_CBM = 700000; // GNF par m³ en maritime — ajustable via config/general.tarifCBM_GNF
 
   // Coordonnées utilisées par le bouton "Au nom de l'entreprise" — adapte si besoin
   const COMPANY_INFO = { nom: "Africa Vision Voyage", telephone: "611830242", email: "" };
@@ -443,6 +444,10 @@
     document.getElementById('modeMaritimeBtn').classList.toggle('active', mode === 'maritime');
     const badge = document.getElementById('summaryModeBadge');
     if(badge) badge.textContent = mode === 'maritime' ? '🚢 Maritime' : '✈️ Aérien';
+    const feeLabel = document.getElementById('feeBaseLabel');
+    if(feeLabel) feeLabel.textContent = mode === 'maritime' ? 'Frais de base (volume) :' : 'Frais de base (poids) :';
+    if(typeof renderProducts === 'function') renderProducts();
+    if(typeof updateFees === 'function') updateFees();
   }
 
   let DESTINATIONS = [
@@ -483,14 +488,44 @@
 
   function newProduct(){
     productSeq++;
-    return {id:productSeq, nom:"", quantite:1, valeurUnitaire:0, poidsUnitaire:0, categorie:CATEGORIES[0]?.nom || ""};
+    return {id:productSeq, nom:"", quantite:1, valeurUnitaire:0, poidsUnitaire:0, longueur:0, largeur:0, hauteur:0, categorie:CATEGORIES[0]?.nom || ""};
   }
   products.push(newProduct());
 
   // ---------------- AUTH ----------------
+  let departCountry = "GUINÉE"; // par défaut ; remplacé par la route assignée de l'utilisateur si définie
+
+  function flagForCountry(name){
+    if(!name || name === "GUINÉE" || name === "GUINEE") return "🇬🇳";
+    const d = DESTINATIONS.find(x => x.name === name);
+    return (d && d.flag) || "🌍";
+  }
+
+  function applyDepartCountry(){
+    const label = document.getElementById('departLabel');
+    if(label) label.textContent = departCountry;
+    const summary = document.getElementById('summaryDepartFlag');
+    if(summary) summary.textContent = flagForCountry(departCountry) + ' ' + departCountry;
+  }
+
+  async function loadUserRoute(user){
+    try{
+      const snap = await db.collection('utilisateurs').where('email', '==', user.email).limit(1).get();
+      if(snap.empty) return; // compte non listé = DGA par défaut, garde GUINÉE
+      const u = snap.docs[0].data();
+      if(u.role !== 'dga' && u.routeAssignee && u.routeAssignee.depart){
+        departCountry = u.routeAssignee.depart;
+        applyDepartCountry();
+      }
+    }catch(e){
+      console.warn("Impossible de charger la route assignée :", e);
+    }
+  }
+
   auth.onAuthStateChanged(user => {
     if(user){
       window._currentUser = user;
+      loadUserRoute(user);
     } else if(REQUIRE_AUTH){
       window.location.href = LOGIN_URL;
     }
@@ -511,6 +546,10 @@
       GNF_PER_USD = Number(doc.data().tauxChangeGNFUSD);
       updateFees();
     }
+    if(doc.exists && doc.data().tarifCBM_GNF){
+      TARIF_CBM = Number(doc.data().tarifCBM_GNF);
+      updateFees();
+    }
   }).catch(() => { /* on garde le taux par défaut */ });
 
   // ---------------- CATEGORIES (Firestore) ----------------
@@ -527,6 +566,7 @@
       DESTINATIONS = snap.docs.map(d => ({name: d.data().nom, dial: d.data().dial, flag: d.data().flag}));
       renderDestinationOptions();
       updateDestinationUI();
+      applyDepartCountry();
     }
   }).catch(() => { /* on garde les destinations par défaut */ });
 
@@ -587,13 +627,22 @@
           <label>Poids unitaire (kg) *</label>
           <div class="input-shell"><input type="number" class="p-poids" min="0" step="0.1" value="${p.poidsUnitaire}"></div>
         </div>
+        <div class="field dims-field" style="display:${transportMode==='maritime'?'block':'none'};">
+          <label>Dimensions unitaires — L × l × H (cm)</label>
+          <div class="grid-2" style="grid-template-columns:1fr 1fr 1fr; gap:8px;">
+            <div class="input-shell"><input type="number" class="p-long" min="0" step="1" placeholder="L" value="${p.longueur}"></div>
+            <div class="input-shell"><input type="number" class="p-larg" min="0" step="1" placeholder="l" value="${p.largeur}"></div>
+            <div class="input-shell"><input type="number" class="p-haut" min="0" step="1" placeholder="H" value="${p.hauteur}"></div>
+          </div>
+        </div>
         <div class="field">
           <label>Catégorie</label>
           <div class="input-shell"><select class="p-cat">${categoryOptions(p.categorie)}</select></div>
-          <div class="cat-hint">Détermine le tarif d'expédition au kg</div>
+          <div class="cat-hint">${transportMode==='maritime' ? "Devient purement indicatif : le tarif maritime se base sur le volume, pas sur la catégorie" : "Détermine le tarif d'expédition au kg"}</div>
         </div>
         <div class="subtotal">
           <span>Poids : <strong class="sub-poids">0.0 kg</strong></span>
+          ${transportMode==='maritime' ? '<span>Volume : <strong class="sub-volume">0.000 m³</strong></span>' : ''}
           <span>Valeur : <strong class="sub-valeur">0 GNF</strong></span>
         </div>
       `;
@@ -601,16 +650,21 @@
 
       const q = row.querySelector('.p-nom'), qte = row.querySelector('.p-qte'),
             val = row.querySelector('.p-val'), poids = row.querySelector('.p-poids'),
+            long = row.querySelector('.p-long'), larg = row.querySelector('.p-larg'), haut = row.querySelector('.p-haut'),
             cat = row.querySelector('.p-cat');
 
       function sync(){
         p.nom = q.value; p.quantite = Number(qte.value)||0; p.valeurUnitaire = Number(val.value)||0;
         p.poidsUnitaire = Number(poids.value)||0; p.categorie = cat.value;
+        if(long){ p.longueur = Number(long.value)||0; p.largeur = Number(larg.value)||0; p.hauteur = Number(haut.value)||0; }
         row.querySelector('.sub-poids').textContent = (p.quantite*p.poidsUnitaire).toFixed(1) + " kg";
+        const subVolume = row.querySelector('.sub-volume');
+        if(subVolume) subVolume.textContent = (p.quantite*(p.longueur*p.largeur*p.hauteur)/1e6).toFixed(3) + " m³";
         row.querySelector('.sub-valeur').textContent = fmtGNF(p.quantite*p.valeurUnitaire);
         updateProductTotals();
       }
       [q,qte,val,poids,cat].forEach(el => el.addEventListener('input', sync));
+      if(long) [long,larg,haut].forEach(el => el.addEventListener('input', sync));
       sync();
 
       const rmBtn = row.querySelector('.remove-product');
@@ -629,7 +683,9 @@
     const poidsT = products.reduce((s,p) => s + p.quantite*p.poidsUnitaire, 0);
     const valT = products.reduce((s,p) => s + p.quantite*p.valeurUnitaire, 0);
     document.getElementById('prodCount').textContent = products.length;
-    document.getElementById('prodTotals').textContent = poidsT.toFixed(1) + " kg · " + fmtGNF(valT);
+    document.getElementById('prodTotals').textContent = transportMode === 'maritime'
+      ? computeTotalVolume().toFixed(3) + " m³ · " + fmtGNF(valT)
+      : poidsT.toFixed(1) + " kg · " + fmtGNF(valT);
     updateFees();
   }
   renderProducts();
@@ -665,7 +721,13 @@
     const c = CATEGORIES.find(c => c.nom === nom);
     return c ? c.tarifKg : 0;
   }
+  function computeTotalVolume(){
+    return products.reduce((s,p) => s + p.quantite*((p.longueur*p.largeur*p.hauteur)/1e6), 0);
+  }
   function computeFeeBase(){
+    if(transportMode === 'maritime'){
+      return computeTotalVolume() * TARIF_CBM;
+    }
     return products.reduce((s,p) => s + (p.quantite*p.poidsUnitaire)*categoryTarif(p.categorie), 0);
   }
   function updateFees(){
@@ -758,7 +820,7 @@
       Adresse : ${val('d_adresse')}
     `;
     document.getElementById('summaryProducts').innerHTML = products.map(p => `
-      <div class="prod-line"><span>x${p.quantite} ${p.nom}</span><span>${(p.quantite*p.poidsUnitaire).toFixed(1)} kg · ${fmtGNF(p.quantite*p.valeurUnitaire)}</span></div>
+      <div class="prod-line"><span>x${p.quantite} ${p.nom}</span><span>${transportMode==='maritime' ? (p.quantite*(p.longueur*p.largeur*p.hauteur)/1e6).toFixed(3)+' m³' : (p.quantite*p.poidsUnitaire).toFixed(1)+' kg'} · ${fmtGNF(p.quantite*p.valeurUnitaire)}</span></div>
     `).join('');
     const base = computeFeeBase();
     const rabais = Number(document.getElementById('rabaisInput').value)||0;
@@ -830,11 +892,12 @@
       numeroSuivi: trackingNumber,
       statut: "en_attente",
       mode: transportMode,
-      route: { depart: "GUINEE", arrivee: d.name },
+      route: { depart: departCountry, arrivee: d.name },
       expediteur: { nom: val('s_nom'), prenom: val('s_prenom'), telephone: "+224"+val('s_tel'), email: val('s_email'), adresse: val('s_adresse') },
       destinataire: { nom: val('d_nom'), prenom: val('d_prenom'), telephone: d.dial+val('d_tel'), email: val('d_email'), adresse: val('d_adresse') },
       produits: products.map(p => ({ nom:p.nom, quantite:p.quantite, valeurUnitaire:p.valeurUnitaire, poidsUnitaire:p.poidsUnitaire, categorie:p.categorie })),
       poidsTotal: products.reduce((s,p)=>s+p.quantite*p.poidsUnitaire,0),
+      volumeTotal: computeTotalVolume(),
       valeurTotal: products.reduce((s,p)=>s+p.quantite*p.valeurUnitaire,0),
       frais: { fraisBase: base, rabais, extras: extraFees.map(f=>({label:f.label, montant:f.montant})), total },
       dateCreation: firebase.firestore.FieldValue.serverTimestamp(),
