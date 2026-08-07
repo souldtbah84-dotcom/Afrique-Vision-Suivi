@@ -163,6 +163,18 @@
       </div>
     </div>
 
+    <div class="card" style="margin-top:12px;">
+      <div class="rate-row">
+        <div><div class="rate-label">Tarif maritime</div><div class="rate-value" id="cbmDisplay">— GNF / m³</div></div>
+        <button class="rate-toggle" id="cbmToggle">Modifier</button>
+      </div>
+      <div class="rate-edit" id="cbmEdit">
+        <input type="number" id="cbmInput" placeholder="Ex : 700000">
+        <button id="cbmSave">Enregistrer</button>
+      </div>
+      <div style="font-size:11.5px; color:var(--slate-light); margin-top:8px;">Utilisé par "Nouveau Colis" pour calculer les frais des envois maritimes, sur la base du volume (L × l × H) plutôt que du poids.</div>
+    </div>
+
     <div class="section-head">
       <h2>Destinations</h2>
       <button class="add-btn" id="addDestBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg> Ajouter</button>
@@ -334,10 +346,10 @@
         window.location.href = "dashboard.html";
         return;
       }
-      loadCategories(); loadDestinations(); loadRate(); loadUsers();
+      loadCategories(); loadDestinations(); loadRate(); loadCbmRate(); loadUsers();
     }
     else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
-    else { loadCategories(); loadDestinations(); loadRate(); loadUsers(); }
+    else { loadCategories(); loadDestinations(); loadRate(); loadCbmRate(); loadUsers(); }
   });
 
   // ---------------- TABS ----------------
@@ -440,6 +452,24 @@
     await db.collection('config').doc('general').set({tauxChangeGNFUSD: val}, {merge:true});
     document.getElementById('rateEdit').classList.remove('show');
     loadRate();
+  });
+
+  function loadCbmRate(){
+    db.collection('config').doc('general').get().then(doc => {
+      const rate = doc.exists && doc.data().tarifCBM_GNF ? doc.data().tarifCBM_GNF : 700000;
+      document.getElementById('cbmDisplay').textContent = fmtGNF(rate) + " / m³";
+      document.getElementById('cbmInput').value = rate;
+    });
+  }
+  document.getElementById('cbmToggle').addEventListener('click', () => {
+    document.getElementById('cbmEdit').classList.toggle('show');
+  });
+  document.getElementById('cbmSave').addEventListener('click', async () => {
+    const val = Number(document.getElementById('cbmInput').value);
+    if(!val || val <= 0) return;
+    await db.collection('config').doc('general').set({tarifCBM_GNF: val}, {merge:true});
+    document.getElementById('cbmEdit').classList.remove('show');
+    loadCbmRate();
   });
 
   let editingDestId = null;
