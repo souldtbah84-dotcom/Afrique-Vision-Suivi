@@ -238,10 +238,12 @@
 
     <div class="field">
       <label>Route assignée</label>
-      <div class="input-shell"><select id="user_route">
-        <option value="">Aucune (toutes les routes)</option>
-      </select></div>
-      <div style="font-size:11.5px; color:var(--slate-light); margin-top:5px;">La route dont cet utilisateur est responsable.</div>
+      <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:center;">
+        <div class="input-shell"><select id="user_route_depart"><option value="">Départ — aucun</option></select></div>
+        <span style="color:var(--slate-light);">→</span>
+        <div class="input-shell"><select id="user_route_arrivee"><option value="">Destination — aucune</option></select></div>
+      </div>
+      <div style="font-size:11.5px; color:var(--slate-light); margin-top:5px;">Ex : un agent basé en Chine peut avoir CHINE en départ et GUINÉE en destination. Laisse les deux vides pour aucune restriction.</div>
     </div>
 
     <div class="field"><label>Rôle</label><div class="input-shell"><select id="user_role">
@@ -444,8 +446,18 @@
   function loadDestinations(){
     db.collection('destinations').get().then(snap => {
       const list = document.getElementById('destList');
-      const routeSelect = document.getElementById('user_route');
-      routeSelect.innerHTML = '<option value="">Aucune (toutes les routes)</option>';
+      const departSelect = document.getElementById('user_route_depart');
+      const arriveeSelect = document.getElementById('user_route_arrivee');
+      departSelect.innerHTML = '<option value="">Départ — aucun</option>';
+      arriveeSelect.innerHTML = '<option value="">Destination — aucune</option>';
+
+      const addCountryOption = (nom) => {
+        const opt1 = document.createElement('option'); opt1.value = nom; opt1.textContent = nom;
+        departSelect.appendChild(opt1);
+        const opt2 = document.createElement('option'); opt2.value = nom; opt2.textContent = nom;
+        arriveeSelect.appendChild(opt2);
+      };
+      addCountryOption('GUINÉE');
 
       if(snap.empty){
         list.innerHTML = '<div class="empty-state">Aucune destination personnalisée. Le formulaire "Nouveau Colis" utilise 8 destinations par défaut tant que rien n\u2019est ajouté ici.</div>';
@@ -454,10 +466,7 @@
       list.innerHTML = '';
       snap.forEach(doc => {
         const d = doc.data();
-        const opt = document.createElement('option');
-        opt.value = d.nom;
-        opt.textContent = 'GUINÉE → ' + d.nom;
-        routeSelect.appendChild(opt);
+        addCountryOption(d.nom);
 
         const row = document.createElement('div');
         row.className = 'item-row';
@@ -531,7 +540,9 @@
         const perms = u.permissions || {};
         const activeModules = u.role === 'dga' ? ['Accès total'] : PERM_KEYS.filter(k => perms[k] !== false).map(k => PERM_LABELS[k]);
         if(u.role !== 'dga' && perms.supprimerColis === true) activeModules.push('🗑️ Suppression colis');
-        if(u.routeAssignee) activeModules.push('🧭 GUINÉE → ' + u.routeAssignee);
+        if(u.routeAssignee && (u.routeAssignee.depart || u.routeAssignee.arrivee)){
+          activeModules.push('🧭 ' + (u.routeAssignee.depart||'?') + ' → ' + (u.routeAssignee.arrivee||'?'));
+        }
         const row = document.createElement('div');
         row.className = 'item-row';
         row.style.alignItems = 'flex-start';
@@ -561,7 +572,8 @@
     document.getElementById('user_email').disabled = !!id; // email figé à l'édition (lié au compte Firebase)
     document.getElementById('user_password').value = '';
     document.getElementById('passwordBlock').style.display = id ? 'none' : 'block';
-    document.getElementById('user_route').value = (data && data.routeAssignee) || '';
+    document.getElementById('user_route_depart').value = (data && data.routeAssignee && data.routeAssignee.depart) || '';
+    document.getElementById('user_route_arrivee').value = (data && data.routeAssignee && data.routeAssignee.arrivee) || '';
     document.getElementById('user_role').value = data ? data.role : 'agent';
     document.getElementById('user_statut').value = data ? data.statut : 'actif';
 
@@ -601,7 +613,9 @@
     const prenom = document.getElementById('user_prenom').value.trim();
     const email = document.getElementById('user_email').value.trim();
     const password = document.getElementById('user_password').value;
-    const routeAssignee = document.getElementById('user_route').value;
+    const routeDepart = document.getElementById('user_route_depart').value;
+    const routeArrivee = document.getElementById('user_route_arrivee').value;
+    const routeAssignee = (routeDepart || routeArrivee) ? { depart: routeDepart, arrivee: routeArrivee } : null;
     const role = document.getElementById('user_role').value;
     const statut = document.getElementById('user_statut').value;
     const alertBox = document.getElementById('userAlert');
