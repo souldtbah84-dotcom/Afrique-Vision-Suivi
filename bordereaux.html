@@ -70,6 +70,8 @@
   .b-count{flex:none; text-align:right;}
   .b-count .n{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; color:var(--navy-800);}
   .b-count .l{font-size:10px; color:var(--slate-light); text-transform:uppercase;}
+  .b-delete{flex:none; width:34px; height:34px; border-radius:9px; border:1px solid var(--line); background:#fff; color:var(--red-flag); display:flex; align-items:center; justify-content:center; cursor:pointer;}
+  .b-delete:hover{background:#fdecec; border-color:#f3c6c4;}
 
   .empty-state, .error-state{text-align:center; padding:40px 20px; background:var(--paper); border:1px dashed var(--line); border-radius:14px; color:var(--slate);}
   .error-state{border-color:#f3c6c4; background:var(--error-bg); color:var(--error-text); border-style:solid;}
@@ -302,19 +304,43 @@
       const isMaritime = data.mode === 'Maritime';
       const s = statutOf(data);
       const statutLabel = {brouillon:'Brouillon', valide:'Validé', recu:'Reçu'}[s];
-      const row = document.createElement('a');
-      row.href = 'bordereau.html?id=' + id;
+      const row = document.createElement('div');
       row.className = 'b-card';
       row.innerHTML = `
-        <div class="b-icon ${isMaritime?'maritime':'aerien'}">${isMaritime?'🚢':'✈️'}</div>
-        <div class="b-main">
-          <div class="b-num">${data.numeroBordereau || id} <span class="statut-pill ${s}">${statutLabel}</span></div>
-          <div class="b-sub">${[data.reference, fmtDate(data.dateDepart)].filter(Boolean).join(' · ')}</div>
-        </div>
-        <div class="b-count"><div class="n">${(data.colisIds||[]).length}</div><div class="l">colis</div></div>
+        <a href="bordereau.html?id=${id}" style="display:flex; align-items:center; gap:13px; flex:1; min-width:0;">
+          <div class="b-icon ${isMaritime?'maritime':'aerien'}">${isMaritime?'🚢':'✈️'}</div>
+          <div class="b-main">
+            <div class="b-num">${data.numeroBordereau || id} <span class="statut-pill ${s}">${statutLabel}</span></div>
+            <div class="b-sub">${[data.reference, fmtDate(data.dateDepart)].filter(Boolean).join(' · ')}</div>
+          </div>
+          <div class="b-count"><div class="n">${(data.colisIds||[]).length}</div><div class="l">colis</div></div>
+        </a>
+        <button class="b-delete" title="Supprimer ce bordereau" data-id="${id}" data-num="${data.numeroBordereau || id}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
       `;
+      row.querySelector('.b-delete').addEventListener('click', (e) => {
+        e.preventDefault();
+        deleteBordereau(id, data.numeroBordereau || id, data.colisIds || []);
+      });
       container.appendChild(row);
     });
+  }
+
+  async function deleteBordereau(id, numero, colisIds){
+    if(!confirm("Supprimer le bordereau " + numero + " ?\n\nLes " + colisIds.length + " colis qu'il contient redeviendront disponibles pour un autre bordereau (statut remis à \u00ab En attente \u00bb).")) return;
+    try{
+      await Promise.all(colisIds.map(cid => db.collection('colis').doc(cid).update({
+        bordereauId: firebase.firestore.FieldValue.delete(),
+        statut: 'en_attente'
+      })));
+      await db.collection('bordereaux').doc(id).delete();
+      loadBordereaux();
+      loadWaitingColis();
+    }catch(err){
+      console.error(err);
+      alert("Impossible de supprimer ce bordereau. Vérifie les règles Firestore.");
+    }
   }
 
   function updateSelStats(){
