@@ -233,7 +233,7 @@
       <div class="field">
         <label>Téléphone *</label>
         <div class="phone-row">
-          <div class="phone-code">🇬🇳 +224</div>
+          <div class="phone-code" id="departPhoneCode">🇬🇳 +224</div>
           <div class="input-shell"><input type="tel" id="s_tel" placeholder="6XX XXX XXX"></div>
         </div>
       </div>
@@ -431,7 +431,7 @@
   let TARIF_CBM = 700000; // GNF par m³ en maritime — ajustable via config/general.tarifCBM_GNF
 
   // Coordonnées utilisées par le bouton "Au nom de l'entreprise" — adapte si besoin
-  const COMPANY_INFO = { nom: "Africa Vision Voyage", telephone: "611830242", email: "" };
+  const COMPANY_INFO = { nom: "Africa Vision Voyage", telephone: "612398318", email: "" };
 
   // Destinations par défaut si la collection Firestore "destinations" est vide.
   // Idéalement synchronisées avec ton module Configuration > Routes & Tarifs.
@@ -494,11 +494,17 @@
 
   // ---------------- AUTH ----------------
   let departCountry = "GUINÉE"; // par défaut ; remplacé par la route assignée de l'utilisateur si définie
+  let departDialCode = "+224";
 
   function flagForCountry(name){
     if(!name || name === "GUINÉE" || name === "GUINEE") return "🇬🇳";
     const d = DESTINATIONS.find(x => x.name === name);
     return (d && d.flag) || "🌍";
+  }
+  function dialForCountry(name){
+    if(!name || name === "GUINÉE" || name === "GUINEE") return "+224";
+    const d = DESTINATIONS.find(x => x.name === name);
+    return (d && d.dial) || "+224";
   }
 
   function applyDepartCountry(){
@@ -506,6 +512,9 @@
     if(label) label.textContent = departCountry;
     const summary = document.getElementById('summaryDepartFlag');
     if(summary) summary.textContent = flagForCountry(departCountry) + ' ' + departCountry;
+    departDialCode = dialForCountry(departCountry);
+    const phoneCode = document.getElementById('departPhoneCode');
+    if(phoneCode) phoneCode.textContent = flagForCountry(departCountry) + ' ' + departDialCode;
   }
 
   async function loadUserRoute(user){
@@ -623,12 +632,12 @@
             <div class="input-shell"><input type="number" class="p-val" min="0" value="${p.valeurUnitaire}"></div>
           </div>
         </div>
-        <div class="field">
+        <div class="field poids-field" style="display:${transportMode==='maritime'?'none':'block'};">
           <label>Poids unitaire (kg) *</label>
           <div class="input-shell"><input type="number" class="p-poids" min="0" step="0.1" value="${p.poidsUnitaire}"></div>
         </div>
         <div class="field dims-field" style="display:${transportMode==='maritime'?'block':'none'};">
-          <label>Dimensions unitaires — L × l × H (cm)</label>
+          <label>Dimensions unitaires — L × l × H (cm) *</label>
           <div class="grid-2" style="grid-template-columns:1fr 1fr 1fr; gap:8px;">
             <div class="input-shell"><input type="number" class="p-long" min="0" step="1" placeholder="L" value="${p.longueur}"></div>
             <div class="input-shell"><input type="number" class="p-larg" min="0" step="1" placeholder="l" value="${p.largeur}"></div>
@@ -641,8 +650,7 @@
           <div class="cat-hint">${transportMode==='maritime' ? "Devient purement indicatif : le tarif maritime se base sur le volume, pas sur la catégorie" : "Détermine le tarif d'expédition au kg"}</div>
         </div>
         <div class="subtotal">
-          <span>Poids : <strong class="sub-poids">0.0 kg</strong></span>
-          ${transportMode==='maritime' ? '<span>Volume : <strong class="sub-volume">0.000 m³</strong></span>' : ''}
+          ${transportMode==='maritime' ? '<span>Volume : <strong class="sub-volume">0.000 m³</strong></span>' : '<span>Poids : <strong class="sub-poids">0.0 kg</strong></span>'}
           <span>Valeur : <strong class="sub-valeur">0 GNF</strong></span>
         </div>
       `;
@@ -655,15 +663,18 @@
 
       function sync(){
         p.nom = q.value; p.quantite = Number(qte.value)||0; p.valeurUnitaire = Number(val.value)||0;
-        p.poidsUnitaire = Number(poids.value)||0; p.categorie = cat.value;
+        p.categorie = cat.value;
+        if(poids) p.poidsUnitaire = Number(poids.value)||0;
         if(long){ p.longueur = Number(long.value)||0; p.largeur = Number(larg.value)||0; p.hauteur = Number(haut.value)||0; }
-        row.querySelector('.sub-poids').textContent = (p.quantite*p.poidsUnitaire).toFixed(1) + " kg";
+        const subPoids = row.querySelector('.sub-poids');
+        if(subPoids) subPoids.textContent = (p.quantite*p.poidsUnitaire).toFixed(1) + " kg";
         const subVolume = row.querySelector('.sub-volume');
         if(subVolume) subVolume.textContent = (p.quantite*(p.longueur*p.largeur*p.hauteur)/1e6).toFixed(3) + " m³";
         row.querySelector('.sub-valeur').textContent = fmtGNF(p.quantite*p.valeurUnitaire);
         updateProductTotals();
       }
-      [q,qte,val,poids,cat].forEach(el => el.addEventListener('input', sync));
+      [q,qte,val,cat].forEach(el => el.addEventListener('input', sync));
+      if(poids) poids.addEventListener('input', sync);
       if(long) [long,larg,haut].forEach(el => el.addEventListener('input', sync));
       sync();
 
@@ -765,8 +776,17 @@
     }
     if(step === 3){
       for(const p of products){
-        if(!p.nom || p.quantite<=0 || p.poidsUnitaire<=0){
-          showAlert("Chaque produit doit avoir un nom, une quantité et un poids supérieurs à 0.");
+        if(!p.nom || p.quantite<=0){
+          showAlert("Chaque produit doit avoir un nom et une quantité supérieurs à 0.");
+          return false;
+        }
+        if(transportMode === 'maritime'){
+          if(p.longueur<=0 || p.largeur<=0 || p.hauteur<=0){
+            showAlert("Chaque produit doit avoir des dimensions (L × l × H) supérieures à 0 pour un envoi maritime.");
+            return false;
+          }
+        }else if(p.poidsUnitaire<=0){
+          showAlert("Chaque produit doit avoir un poids supérieur à 0.");
           return false;
         }
       }
@@ -808,7 +828,7 @@
   function renderSummary(){
     document.getElementById('summarySender').innerHTML = `
       <strong>${val('s_prenom')} ${val('s_nom')}</strong>
-      Tél : +224 ${val('s_tel')}<br>
+      Tél : ${departDialCode} ${val('s_tel')}<br>
       ${val('s_email') ? 'Email : '+val('s_email')+'<br>' : ''}
       Adresse : ${val('s_adresse') || 'Non renseignée'}
     `;
@@ -893,7 +913,7 @@
       statut: "en_attente",
       mode: transportMode,
       route: { depart: departCountry, arrivee: d.name },
-      expediteur: { nom: val('s_nom'), prenom: val('s_prenom'), telephone: "+224"+val('s_tel'), email: val('s_email'), adresse: val('s_adresse') },
+      expediteur: { nom: val('s_nom'), prenom: val('s_prenom'), telephone: departDialCode+val('s_tel'), email: val('s_email'), adresse: val('s_adresse') },
       destinataire: { nom: val('d_nom'), prenom: val('d_prenom'), telephone: d.dial+val('d_tel'), email: val('d_email'), adresse: val('d_adresse') },
       produits: products.map(p => ({ nom:p.nom, quantite:p.quantite, valeurUnitaire:p.valeurUnitaire, poidsUnitaire:p.poidsUnitaire, categorie:p.categorie })),
       poidsTotal: products.reduce((s,p)=>s+p.quantite*p.poidsUnitaire,0),
