@@ -345,8 +345,12 @@
 
   function updateSelStats(){
     const selected = waitingColis.filter(c => selectedColisIds.has(c.id));
-    const poids = selected.reduce((s,c) => s + (c.data.poidsTotal||0), 0);
-    document.getElementById('selCount').textContent = selected.length + " colis sélectionné(s) · " + poids.toFixed(1) + " kg";
+    const poids = selected.reduce((s,c) => s + (c.data.mode !== 'maritime' ? (c.data.poidsTotal||0) : 0), 0);
+    const volume = selected.reduce((s,c) => s + (c.data.mode === 'maritime' ? (c.data.volumeTotal||0) : 0), 0);
+    const parts = [selected.length + " colis sélectionné(s)"];
+    if(poids > 0) parts.push(poids.toFixed(1) + " kg");
+    if(volume > 0) parts.push(volume.toFixed(3) + " m³");
+    document.getElementById('selCount').textContent = parts.join(' · ');
     document.getElementById('toggleAllBtn').textContent = (selectedColisIds.size > 0 && selectedColisIds.size === visibleColisIds().length) ? "Tout désélectionner" : "Tout sélectionner";
   }
 
@@ -372,7 +376,7 @@
     }
 
     box.innerHTML = `<table class="picker-table">
-      <thead><tr><th></th><th>Code</th><th>Trajet</th><th>Mode</th><th class="num">Poids</th><th class="num">Frais</th></tr></thead>
+      <thead><tr><th></th><th>Code</th><th>Trajet</th><th>Mode</th><th class="num">Poids/Vol.</th><th class="num">Frais</th></tr></thead>
       <tbody id="colisCheckBody"></tbody>
     </table>`;
     const tbody = document.getElementById('colisCheckBody');
@@ -388,7 +392,7 @@
         <td><div class="picker-track">${data.numeroSuivi||id}</div><div class="picker-sub">${[dest.prenom,dest.nom].filter(Boolean).join(' ')||'—'}</div></td>
         <td class="picker-sub">${(route.depart||'GN')} → ${(route.arrivee||'—')}</td>
         <td class="picker-sub">${isMaritime?'🚢':'✈️'}</td>
-        <td class="num">${(data.poidsTotal||0).toFixed(1)} kg</td>
+        <td class="num">${isMaritime ? (data.volumeTotal||0).toFixed(3)+' m³' : (data.poidsTotal||0).toFixed(1)+' kg'}</td>
         <td class="num">${frais ? new Intl.NumberFormat('fr-FR').format(Math.round(frais)) + ' GNF' : '—'}</td>
       `;
       tr.querySelector('input').addEventListener('change', e => {
