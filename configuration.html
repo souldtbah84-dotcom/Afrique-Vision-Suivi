@@ -238,6 +238,7 @@
     <div class="field"><label>Nom *</label><div class="input-shell"><input type="text" id="user_nom"></div></div>
     <div class="field"><label>Prénom *</label><div class="input-shell"><input type="text" id="user_prenom"></div></div>
     <div class="field"><label>Email *</label><div class="input-shell"><input type="email" id="user_email"></div></div>
+    <div class="field"><label>Téléphone (optionnel)</label><div class="input-shell"><input type="tel" id="user_tel" placeholder="Ex : 612 39 83 18"></div></div>
 
     <div class="field" id="passwordBlock">
       <label>Mot de passe *</label>
@@ -600,6 +601,7 @@
     document.getElementById('user_prenom').value = data ? data.prenom : '';
     document.getElementById('user_email').value = data ? data.email : '';
     document.getElementById('user_email').disabled = !!id; // email figé à l'édition (lié au compte Firebase)
+    document.getElementById('user_tel').value = (data && data.telephone) || '';
     document.getElementById('user_password').value = '';
     document.getElementById('passwordBlock').style.display = id ? 'none' : 'block';
     document.getElementById('user_route_depart').value = (data && data.routeAssignee && data.routeAssignee.depart) || '';
@@ -642,6 +644,7 @@
     const nom = document.getElementById('user_nom').value.trim();
     const prenom = document.getElementById('user_prenom').value.trim();
     const email = document.getElementById('user_email').value.trim();
+    const telephone = document.getElementById('user_tel').value.trim();
     const password = document.getElementById('user_password').value;
     const routeDepart = document.getElementById('user_route_depart').value;
     const routeArrivee = document.getElementById('user_route_arrivee').value;
@@ -669,11 +672,11 @@
     btn.disabled = true;
     try{
       if(editingUserId){
-        await db.collection('utilisateurs').doc(editingUserId).update({nom, prenom, email, role, statut, permissions, routeAssignee});
+        await db.collection('utilisateurs').doc(editingUserId).update({nom, prenom, email, telephone, role, statut, permissions, routeAssignee});
       }else{
         btn.textContent = "Création du compte…";
         await createAuthAccount(email, password);
-        await db.collection('utilisateurs').add({nom, prenom, email, role, statut, permissions, routeAssignee, dateAjout: firebase.firestore.FieldValue.serverTimestamp()});
+        await db.collection('utilisateurs').add({nom, prenom, email, telephone, role, statut, permissions, routeAssignee, dateAjout: firebase.firestore.FieldValue.serverTimestamp()});
       }
       document.getElementById('userOverlay').classList.remove('show');
       loadUsers();
