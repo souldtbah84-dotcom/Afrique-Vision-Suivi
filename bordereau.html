@@ -215,6 +215,7 @@
 
   function render(b, colisList){
     const poidsTotal = colisList.reduce((s,c) => s + (c.data.poidsTotal||0), 0);
+    const volumeTotal = colisList.reduce((s,c) => s + (c.data.volumeTotal||0), 0);
     const isMaritime = b.mode === 'Maritime';
     const statutB = b.statutBordereau || 'valide';
     const lifecycleLabel = {brouillon:'Brouillon', valide:'Validé', recu:'Reçu'}[statutB];
@@ -243,7 +244,7 @@
 
           <table>
             <thead>
-              <tr><th>N° Suivi</th><th>Destinataire</th><th>Destination</th><th class="num">Poids</th><th>Statut</th></tr>
+              <tr><th>N° Suivi</th><th>Destinataire</th><th>Destination</th><th class="num">${isMaritime?'Volume':'Poids'}</th><th>Statut</th></tr>
             </thead>
             <tbody>
               ${colisList.map(c => {
@@ -254,7 +255,7 @@
                   <td><strong>${c.data.numeroSuivi||c.id}</strong></td>
                   <td>${[dest.prenom,dest.nom].filter(Boolean).join(' ')||'—'}</td>
                   <td>${route.arrivee||'—'}</td>
-                  <td class="num">${(c.data.poidsTotal||0).toFixed(1)} kg</td>
+                  <td class="num">${isMaritime ? (c.data.volumeTotal||0).toFixed(3)+' m³' : (c.data.poidsTotal||0).toFixed(1)+' kg'}</td>
                   <td><span class="status-pill ${statut}">${statusLabel(statut)}</span></td>
                 </tr>`;
               }).join('')}
@@ -262,7 +263,7 @@
           </table>
 
           <div class="doc-totals">
-            <div class="row grand"><span>Poids total</span><span>${poidsTotal.toFixed(1)} kg</span></div>
+            <div class="row grand"><span>${isMaritime?'Volume total':'Poids total'}</span><span>${isMaritime ? volumeTotal.toFixed(3)+' m³' : poidsTotal.toFixed(1)+' kg'}</span></div>
           </div>
 
           <div class="doc-sign">
@@ -289,7 +290,7 @@
 
     document.getElementById('printBtn').addEventListener('click', () => window.print());
     document.getElementById('waBtn').addEventListener('click', () => {
-      const msg = `Bordereau Africa Vision\n${b.numeroBordereau||bordereauId}\nMode : ${b.mode||''}\nRéférence : ${b.reference||''}\nDépart : ${fmtDate(b.dateDepart)}\nColis : ${colisList.length}\nPoids total : ${poidsTotal.toFixed(1)} kg`;
+      const msg = `Bordereau Africa Vision\n${b.numeroBordereau||bordereauId}\nMode : ${b.mode||''}\nRéférence : ${b.reference||''}\nDépart : ${fmtDate(b.dateDepart)}\nColis : ${colisList.length}\n${isMaritime ? 'Volume total : '+volumeTotal.toFixed(3)+' m³' : 'Poids total : '+poidsTotal.toFixed(1)+' kg'}`;
       window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
     });
   }
