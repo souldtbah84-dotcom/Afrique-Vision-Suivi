@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Africa Vision · Nouveau Colis</title>
+<title>Africa Vision · Étiquette</title>
 <link rel="manifest" href="manifest-admin.json">
 <meta name="theme-color" content="#0f2142">
 <link rel="apple-touch-icon" href="icon-192-interne.png">
@@ -15,157 +15,76 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@500;700&family=Inter:wght@400;500;600;700&display=swap');
 
   :root{
-    --navy-950:#0a1830; --navy-900:#0f2142; --navy-800:#16305c; --navy-700:#1e3f78;
-    --cream:#f6f1e6; --paper:#fffdf8; --gold:#c99a3c; --gold-light:#e6c876;
-    --ink:#0f1b2d; --slate:#5c6b83; --slate-light:#93a1b8; --line:#e7e1d2;
-    --red-flag:#c8342f; --yellow-flag:#f2b632; --green-flag:#1e7a46; --blue-status:#2b5fb0;
-    --error-bg:#fdecec; --error-text:#a32621; --radius:16px;
+    --cream:#f6f1e6; --paper:#fffdf8; --ink:#0a0a0a; --slate:#5c6b83;
+    --red-flag:#c8342f; --yellow-flag:#f2b632; --green-flag:#1e7a46;
   }
   *{box-sizing:border-box;}
-  @media (prefers-reduced-motion: reduce){ *{animation-duration:.01ms !important; transition-duration:.01ms !important;} }
   html,body{margin:0; background:var(--cream); font-family:'Inter',system-ui,sans-serif; color:var(--ink);}
-  a{color:inherit;} button{font-family:inherit;}
+  a{color:inherit; text-decoration:none;} button{font-family:inherit;}
 
-  header{position:sticky; top:0; z-index:20; background:var(--paper); border-bottom:1px solid var(--line);}
+  header{position:sticky; top:0; z-index:20; background:var(--paper); border-bottom:1px solid #e0dbcb;}
   .flagbar{height:3px; background:linear-gradient(90deg, var(--red-flag) 0 33%, var(--yellow-flag) 33% 66%, var(--green-flag) 66% 100%);}
   .headrow{display:flex; align-items:center; gap:12px; padding:13px 18px;}
-  .iconbtn{width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--navy-800); flex:none;}
+  .iconbtn{width:38px; height:38px; border-radius:10px; border:1px solid #e0dbcb; background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#16305c; flex:none;}
   .iconbtn:hover{background:var(--cream);}
   .head-title{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15.5px;}
-  .head-sub{font-size:11.5px; color:var(--slate-light);}
+  .head-sub{font-size:11.5px; color:#93a1b8;}
 
-  main{max-width:640px; margin:0 auto; padding:18px 18px 120px;}
+  main{max-width:420px; margin:0 auto; padding:22px 18px 60px;}
 
-  .route-bar{
-    display:flex; align-items:center; gap:10px; background:var(--paper); border:1px solid var(--line);
-    border-radius:12px; padding:11px 14px; margin-bottom:18px; font-size:13.5px;
+  /* -- Étiquette AWB monochrome -- */
+  .label{background:#fff; border:2.5px solid var(--ink); border-radius:2px; overflow:hidden; box-shadow:0 20px 40px -20px rgba(4,10,25,.35); font-family:'Inter',system-ui,sans-serif;}
+  .lbl-div{border-top:2px solid var(--ink);}
+
+  .lbl-head{display:flex; justify-content:space-between; align-items:flex-start; padding:14px 16px;}
+  .lbl-title{font-family:'Space Grotesk',sans-serif; font-weight:800; font-size:23px; line-height:1.15; text-transform:uppercase;}
+  .mode-badge{border:1.5px solid var(--ink); border-radius:999px; padding:4px 12px; font-size:12px; font-weight:700; letter-spacing:.08em; white-space:nowrap;}
+
+  .lbl-section{padding:12px 16px;}
+  .lbl-caption{font-size:11.5px; font-weight:700; letter-spacing:.08em; color:var(--slate); margin-bottom:5px;}
+  .lbl-name-lg{font-family:'Space Grotesk',sans-serif; font-weight:800; font-size:24px; text-transform:uppercase; line-height:1.15; margin-bottom:4px;}
+  .lbl-city{font-size:15.5px; margin-bottom:4px;}
+  .lbl-row-between{display:flex; justify-content:space-between; align-items:baseline; gap:10px; font-weight:700; font-size:16.5px; text-transform:uppercase;}
+
+  .lbl-qr-row{display:flex; align-items:center; gap:16px; padding:14px 16px;}
+  .lbl-qr{width:110px; height:110px; flex:none; border:1px solid #e0dbcb;}
+  .lbl-track-code{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:26px; letter-spacing:.04em;}
+
+  .lbl-barcode-section{padding:14px 16px; text-align:center;}
+  .lbl-barcode-section svg{max-width:100%; height:auto;}
+  .lbl-track-code-sm{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:15px; letter-spacing:.25em; margin-top:2px;}
+
+  .lbl-sender-row{display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:3px;}
+  .lbl-sender-row strong{font-size:16.5px; font-weight:700; text-transform:uppercase;}
+  .lbl-sender-row span{font-size:15.5px; font-weight:600;}
+
+  .lbl-footer-grid{display:grid; grid-template-columns:1fr 1fr 1fr;}
+  .fg-col{padding:10px 12px; text-align:center;}
+  .fg-col:not(:last-child){border-right:2px solid var(--ink);}
+  .fg-val{font-weight:800; font-size:16.5px;}
+
+  .lbl-ref-row{display:flex; justify-content:space-between; align-items:baseline; padding:10px 16px; font-size:14.5px;}
+  .lbl-ref-row strong{font-weight:800; text-transform:uppercase; letter-spacing:.03em;}
+
+  .lbl-legal{padding:12px 16px; font-size:11.5px; color:var(--slate); line-height:1.5;}
+
+  .lbl-domain{text-align:center; padding:10px 16px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; letter-spacing:.15em;}
+
+  .actions-bar{display:flex; gap:10px; margin-top:18px;}
+  .btn{border:none; border-radius:11px; padding:13px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13.5px; cursor:pointer; flex:1; display:flex; align-items:center; justify-content:center; gap:7px;}
+  .btn-primary{background:linear-gradient(160deg, #1e3f78, #0f2142); color:#fff;}
+
+  .loading-state, .error-state{text-align:center; padding:60px 20px; color:var(--slate);}
+
+  @media print{
+    header, .actions-bar{display:none !important;}
+    body{background:#fff;}
+    main{padding:0; max-width:100%;}
+    .label{box-shadow:none;}
   }
-  .route-bar .lbl{color:var(--slate); white-space:nowrap;}
-  .route-bar strong{font-weight:700;}
-  select#destSelect{
-    margin-left:auto; border:1px solid var(--line); border-radius:9px; padding:8px 10px; font-size:13px;
-    background:#fff; color:var(--ink); font-family:inherit; max-width:190px;
-  }
-  select#destSelect:disabled{background:var(--cream); color:var(--slate);}
-  .route-note{font-size:11px; color:var(--slate-light); margin:-12px 0 18px 2px;}
-
-  .mode-toggle{display:flex; gap:8px; margin-bottom:18px;}
-  .mode-btn{
-    flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
-    border:1.5px solid var(--line); border-radius:11px; padding:12px; background:#fff;
-    font-weight:600; font-size:14px; color:var(--slate); cursor:pointer;
-  }
-  .mode-btn svg{flex:none;}
-  .mode-btn.active{border-color:var(--navy-700); background:#eaf0fb; color:var(--navy-900);}
-
-  .progress{display:flex; gap:6px; margin-bottom:4px;}
-  .progress span{flex:1; height:5px; border-radius:3px; background:var(--line);}
-  .progress span.done{background:var(--navy-700);}
-  .progress span.current{background:var(--gold);}
-
-  .step-head{display:flex; align-items:center; gap:12px; margin:16px 0 16px;}
-  .step-num{
-    width:34px; height:34px; border-radius:50%; background:var(--navy-900); color:#fff;
-    display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk',sans-serif; font-weight:700; flex:none;
-  }
-  .step-head h2{margin:0; font-family:'Space Grotesk',sans-serif; font-size:17px;}
-  .step-head .step-of{font-size:12px; color:var(--slate-light);}
-
-  .card{background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin-bottom:16px;}
-  .intro-banner{
-    display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:12px; margin-bottom:18px;
-  }
-  .intro-banner.sender{background:#eaf0fb;}
-  .intro-banner.receiver{background:#e8f6ee;}
-  .intro-banner.product{background:#fdf2de;}
-  .intro-banner.fee{background:#fdf2de;}
-  .intro-banner.summary{background:#e8f6ee;}
-  .intro-banner .ic{width:38px; height:38px; border-radius:10px; background:#fff; display:flex; align-items:center; justify-content:center; flex:none;}
-  .intro-banner .tt{font-weight:700; font-size:14.5px;}
-  .intro-banner .ss{font-size:12.5px; color:var(--slate);}
-
-  .field{margin-bottom:16px;}
-  label{display:block; font-size:12.5px; font-weight:600; color:var(--slate); margin-bottom:6px;}
-  .input-shell{display:flex; align-items:center; border:1.5px solid #e3ddcd; border-radius:11px; background:#fff;}
-  .input-shell:focus-within{border-color:var(--navy-700); box-shadow:0 0 0 3px rgba(30,63,120,.12);}
-  input, select, textarea{width:100%; border:none; outline:none; background:transparent; padding:12px; font-size:14.5px; font-family:inherit; color:var(--ink);}
-  .phone-row{display:flex; gap:8px;}
-  .phone-code{flex:none; width:88px; display:flex; align-items:center; gap:6px; border:1.5px solid #e3ddcd; border-radius:11px; padding:0 10px; background:#fff; font-size:14px; color:var(--slate);}
-  .phone-row .input-shell{flex:1;}
-  .quickfill{font-size:12.5px; color:var(--navy-700); font-weight:600; background:none; border:none; cursor:pointer; padding:0; margin-bottom:14px;}
-  .quickfill:hover{text-decoration:underline;}
-
-  .product-row{border:1px solid var(--line); border-radius:13px; padding:16px; margin-bottom:14px; position:relative;}
-  .product-row-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
-  .product-row-head .tag{background:var(--navy-900); color:#fff; font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:999px;}
-  .remove-product{background:none; border:none; color:var(--red-flag); cursor:pointer; font-size:12.5px; font-weight:600;}
-  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
-  .subtotal{font-size:12.5px; color:var(--slate); background:var(--cream); border-radius:9px; padding:9px 12px; display:flex; justify-content:space-between;}
-  .add-product{
-    width:100%; border:1.5px dashed #cfc8b5; border-radius:12px; padding:14px; background:none;
-    color:var(--navy-700); font-weight:600; font-size:14px; cursor:pointer; margin-bottom:6px;
-  }
-  .add-product:hover{background:#fff;}
-  .cat-hint{font-size:11.5px; color:var(--slate-light); margin-top:6px;}
-
-  .totals-strip{display:flex; justify-content:space-between; align-items:center; padding:14px 4px 4px; font-size:14px; border-top:1px dashed var(--line); margin-top:6px;}
-  .totals-strip strong{font-family:'Space Grotesk',sans-serif; font-size:16px;}
-
-  .fee-line{display:flex; gap:10px; align-items:center; margin-bottom:10px;}
-  .fee-line input{border:1.5px solid #e3ddcd; border-radius:9px; padding:10px;}
-  .fee-line .lbl-in{flex:1;}
-  .fee-line .amt-in{width:120px; flex:none;}
-  .fee-line button{background:none; border:none; color:var(--red-flag); cursor:pointer; flex:none;}
-  .add-fee{background:none; border:none; color:var(--navy-700); font-weight:600; font-size:13.5px; cursor:pointer; padding:0; margin-bottom:6px;}
-
-  .fee-box{background:var(--cream); border-radius:12px; padding:14px 16px; margin-bottom:12px;}
-  .fee-box .row{display:flex; justify-content:space-between; font-size:14px; padding:5px 0;}
-  .fee-box .grand{font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700;}
-  .usd-note{font-size:12px; color:var(--slate-light);}
-  .conv-flag-note{
-    text-align:center; font-size:12px; color:var(--gold); background:#fbf3e2; border-radius:10px; padding:10px; margin-top:8px;
-  }
-
-  .summary-card{border:1px solid var(--line); border-radius:13px; margin-bottom:14px; overflow:hidden;}
-  .summary-head{display:flex; align-items:center; gap:10px; background:var(--cream); padding:11px 15px; font-weight:700; font-size:13.5px;}
-  .summary-head svg{color:var(--navy-800);}
-  .summary-head .ok{margin-left:auto; color:var(--green-flag);}
-  .summary-body{padding:13px 15px; font-size:13.5px; color:var(--slate);}
-  .summary-body strong{color:var(--ink); display:block; font-size:14.5px; margin-bottom:3px;}
-  .prod-line{display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
-  .prod-line:last-child{border-bottom:none;}
-
-  .navbar{
-    position:fixed; left:0; right:0; bottom:0; z-index:20; background:var(--paper); border-top:1px solid var(--line);
-    padding:12px 18px calc(12px + env(safe-area-inset-bottom)); display:flex; gap:10px;
-    max-width:640px; margin:0 auto;
-  }
-  .btn{border:none; border-radius:12px; padding:14px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:14.5px; cursor:pointer; flex:1; display:flex; align-items:center; justify-content:center; gap:8px;}
-  .btn-ghost{background:#fff; border:1.5px solid var(--line); color:var(--navy-900);}
-  .btn-ghost:disabled{opacity:.4; cursor:not-allowed;}
-  .btn-primary{background:linear-gradient(160deg, var(--navy-700), var(--navy-900)); color:#fff;}
-  .btn-success{background:linear-gradient(160deg, #269c5c, var(--green-flag)); color:#fff;}
-  .btn:disabled{opacity:.65; cursor:not-allowed;}
-  .spinner{width:15px; height:15px; border-radius:50%; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; animation:spin .7s linear infinite; display:none;}
-  .btn.loading .spinner{display:inline-block;}
-  @keyframes spin{to{transform:rotate(360deg);}}
-
-  .alert{display:none; align-items:flex-start; gap:9px; background:var(--error-bg); color:var(--error-text); border:1px solid #f3c6c4; border-radius:10px; padding:11px 13px; font-size:13px; margin-bottom:16px;}
-  .alert.show{display:flex;}
-
-  .step{display:none;}
-  .step.active{display:block; animation:fadeIn .25s ease both;}
-  @keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
-
-  .success-screen{display:none; text-align:center; padding:50px 20px;}
-  .success-screen.show{display:block;}
-  .success-icon{width:64px; height:64px; border-radius:50%; background:#e8f6ee; color:var(--green-flag); display:flex; align-items:center; justify-content:center; margin:0 auto 18px;}
-  .success-screen h2{font-family:'Space Grotesk',sans-serif; font-size:20px; margin:0 0 6px;}
-  .success-track{font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; color:var(--navy-800); background:var(--cream); display:inline-block; padding:8px 18px; border-radius:10px; margin:12px 0 22px;}
-  .success-actions{display:flex; flex-direction:column; gap:10px; max-width:320px; margin:0 auto;}
 </style>
 </head>
 <body>
@@ -173,247 +92,23 @@
 <header>
   <div class="flagbar"></div>
   <div class="headrow">
-    <a class="iconbtn" href="dashboard.html" aria-label="Retour">
+    <a class="iconbtn" href="colis.html" aria-label="Retour">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </a>
     <div>
-      <div class="head-title">Nouveau colis</div>
-      <div class="head-sub">Créez un envoi étape par étape</div>
+      <div class="head-title">Étiquette d'expédition</div>
+      <div class="head-sub">Format AWB — à imprimer et coller sur le colis</div>
     </div>
   </div>
 </header>
 
-<main>
-
-  <div class="alert" id="globalAlert"><span id="globalAlertMsg"></span></div>
-
-  <div id="wizardWrap">
-    <div class="route-bar">
-      <span class="lbl">Envoi de</span> <strong id="departLabel">GUINÉE</strong> <span class="lbl">vers</span>
-      <select id="destSelect"></select>
-    </div>
-    <div class="route-note">Modifiable uniquement au début de la saisie</div>
-
-    <div class="mode-toggle" id="modeToggle">
-      <button type="button" class="mode-btn active" id="modeAerienBtn" data-mode="aerien">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M10.5 3.5 4 15l3-.5 2-3.5 2.5 6L13 16l-1.5-6L18 6.5c1-.6 2-.2 2.4.5.4.7.2 1.7-.8 2.3L13 13" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-        Aérien
-      </button>
-      <button type="button" class="mode-btn" id="modeMaritimeBtn" data-mode="maritime">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 18c1.5 1.3 3 1.3 4.5 0s3-1.3 4.5 0 3 1.3 4.5 0 3-1.3 4.5 0M5 14l1-6h12l1 6M9 8V4h4v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Maritime
-      </button>
-    </div>
-
-    <div class="progress" id="progressBar">
-      <span></span><span></span><span></span><span></span><span></span>
-    </div>
-
-    <!-- STEP 1 : EXPEDITEUR -->
-    <section class="step" data-step="1">
-      <div class="step-head">
-        <div class="step-num">1</div>
-        <div><h2>Expéditeur</h2><div class="step-of">Étape 1 sur 5</div></div>
-      </div>
-      <div class="intro-banner sender">
-        <div class="ic">🇬🇳</div>
-        <div><div class="tt">Expéditeur · Guinée</div><div class="ss">Personne qui envoie le colis</div></div>
-      </div>
-
-      <button class="quickfill" id="quickfillSender">↳ Utiliser mes coordonnées de connexion</button>
-
-      <div class="field">
-        <label>Nom *</label>
-        <div class="input-shell"><input type="text" id="s_nom" placeholder="Nom de l'expéditeur"></div>
-      </div>
-      <div class="field">
-        <label>Prénom *</label>
-        <div class="input-shell"><input type="text" id="s_prenom" placeholder="Prénom de l'expéditeur"></div>
-      </div>
-      <div class="field">
-        <label>Téléphone *</label>
-        <div class="phone-row">
-          <div class="phone-code" id="departPhoneCode">🇬🇳 +224</div>
-          <div class="input-shell"><input type="tel" id="s_tel" placeholder="6XX XXX XXX"></div>
-        </div>
-      </div>
-      <div class="field">
-        <label>Email (optionnel)</label>
-        <div class="input-shell"><input type="email" id="s_email" placeholder="email@exemple.com"></div>
-      </div>
-      <div class="field">
-        <label>Adresse</label>
-        <div class="input-shell"><input type="text" id="s_adresse" placeholder="Adresse complète de l'expéditeur"></div>
-      </div>
-    </section>
-
-    <!-- STEP 2 : DESTINATAIRE -->
-    <section class="step" data-step="2">
-      <div class="step-head">
-        <div class="step-num">2</div>
-        <div><h2>Destinataire</h2><div class="step-of">Étape 2 sur 5</div></div>
-      </div>
-      <div class="intro-banner receiver">
-        <div class="ic" id="destFlagIcon">🌍</div>
-        <div><div class="tt">Destinataire · <span id="destNameLabel">—</span></div><div class="ss">Personne qui recevra le colis</div></div>
-      </div>
-
-      <div class="field">
-        <label>Nom *</label>
-        <div class="input-shell"><input type="text" id="d_nom" placeholder="Nom du destinataire"></div>
-      </div>
-      <div class="field">
-        <label>Prénom *</label>
-        <div class="input-shell"><input type="text" id="d_prenom" placeholder="Prénom du destinataire"></div>
-      </div>
-      <div class="field">
-        <label>Téléphone *</label>
-        <div class="phone-row">
-          <div class="phone-code" id="destDialCode">+1</div>
-          <div class="input-shell"><input type="tel" id="d_tel" placeholder="XXX XXX XXXX"></div>
-        </div>
-      </div>
-      <div class="field">
-        <label>Email (optionnel)</label>
-        <div class="input-shell"><input type="email" id="d_email" placeholder="email@exemple.com"></div>
-      </div>
-      <div class="field">
-        <label>Adresse *</label>
-        <div class="input-shell"><input type="text" id="d_adresse" placeholder="Adresse complète (quartier, ville, repère...)"></div>
-      </div>
-    </section>
-
-    <!-- STEP 3 : PRODUITS -->
-    <section class="step" data-step="3">
-      <div class="step-head">
-        <div class="step-num">3</div>
-        <div><h2>Produits</h2><div class="step-of">Étape 3 sur 5</div></div>
-      </div>
-      <div class="intro-banner product">
-        <div class="ic">📦</div>
-        <div><div class="tt">Contenu du colis</div><div class="ss">Détaillez chaque produit dans le colis</div></div>
-      </div>
-
-      <div id="productsContainer"></div>
-      <button class="add-product" id="addProductBtn">+ Ajouter un produit</button>
-
-      <div class="totals-strip">
-        <span>Total <span id="prodCount">1</span> produit(s)</span>
-        <strong id="prodTotals">0.0 kg · 0 GNF</strong>
-      </div>
-    </section>
-
-    <!-- STEP 4 : FRAIS -->
-    <section class="step" data-step="4">
-      <div class="step-head">
-        <div class="step-num">4</div>
-        <div><h2>Frais</h2><div class="step-of">Étape 4 sur 5</div></div>
-      </div>
-      <div class="intro-banner fee">
-        <div class="ic">💳</div>
-        <div><div class="tt">Coûts d'expédition</div><div class="ss">Calcul des frais de transport</div></div>
-      </div>
-
-      <div class="card">
-        <div class="field">
-          <label>Frais de base (calculé selon poids × catégorie)</label>
-          <div class="fee-box"><div class="row"><span id="feeBaseLabel">Frais de base :</span><strong id="feeBaseDisplay">0 GNF</strong></div></div>
-        </div>
-        <div class="field">
-          <label>Rabais appliqué (GNF)</label>
-          <div class="input-shell"><input type="number" id="rabaisInput" value="0" min="0"></div>
-        </div>
-
-        <div id="extraFeesContainer"></div>
-        <button class="add-fee" id="addFeeBtn">+ Ajouter un frais</button>
-
-        <div class="fee-box" style="margin-top:14px;">
-          <div class="row"><span>Total à payer :</span><strong class="grand" id="feeTotalDisplay">0 GNF</strong></div>
-          <div class="usd-note" id="feeUsdNote">≈ 0 USD</div>
-        </div>
-        <div class="conv-flag-note">Montants en GNF (devise d'opération) — conversion USD affichée à titre indicatif</div>
-      </div>
-
-      <div class="card">
-        <div class="field">
-          <label>Paiement à la création (optionnel)</label>
-          <div class="cat-hint" style="margin:-4px 0 12px;">Laisse à 0 si le client paiera plus tard — tu pourras enregistrer le paiement à tout moment depuis le reçu ou la page Paiements.</div>
-        </div>
-        <div class="field">
-          <label>Montant payé maintenant (GNF)</label>
-          <div class="input-shell"><input type="number" id="paiementInitial" value="0" min="0"></div>
-        </div>
-        <div class="field">
-          <label>Méthode de paiement</label>
-          <div class="input-shell"><select id="paiementMethode">
-            <option value="Espèces">Espèces</option>
-            <option value="Orange Money">Orange Money</option>
-            <option value="Mobile Money">Mobile Money</option>
-            <option value="Virement bancaire">Virement bancaire</option>
-            <option value="Autre">Autre</option>
-          </select></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- STEP 5 : RESUME -->
-    <section class="step" data-step="5">
-      <div class="step-head">
-        <div class="step-num">5</div>
-        <div><h2>Résumé</h2><div class="step-of">Étape 5 sur 5</div></div>
-      </div>
-      <div class="intro-banner summary">
-        <div class="ic">✅</div>
-        <div><div class="tt">Résumé du colis</div><div class="ss">Vérifiez les informations avant création</div></div>
-      </div>
-
-      <div class="route-bar" style="justify-content:center; gap:14px;">
-        <span id="summaryDepartFlag">🇬🇳 GUINÉE</span> → <span id="summaryDestFlag">🌍 —</span>
-        <span id="summaryModeBadge" style="font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px; background:var(--cream);">✈️ Aérien</span>
-      </div>
-
-      <div class="summary-card">
-        <div class="summary-head"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M4 20c.8-4 3.6-6 8-6s7.2 2 8 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg> Expéditeur <span class="ok">✓</span></div>
-        <div class="summary-body" id="summarySender"></div>
-      </div>
-      <div class="summary-card">
-        <div class="summary-head"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M4 20c.8-4 3.6-6 8-6s7.2 2 8 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg> Destinataire <span class="ok">✓</span></div>
-        <div class="summary-body" id="summaryReceiver"></div>
-      </div>
-      <div class="summary-card">
-        <div class="summary-head"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 8.5 12 4l-9 4.5 9 4.5 9-4.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg> Produits <span class="ok">✓</span></div>
-        <div class="summary-body" id="summaryProducts"></div>
-      </div>
-      <div class="summary-card">
-        <div class="summary-head"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.7"/></svg> Frais d'expédition <span class="ok">✓</span></div>
-        <div class="summary-body" id="summaryFees"></div>
-      </div>
-    </section>
-  </div>
-
-  <div class="success-screen" id="successScreen">
-    <div class="success-icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M4 12.5 9.5 18 20 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-    <h2>Colis créé avec succès</h2>
-    <p style="color:var(--slate); font-size:13.5px;">Numéro de suivi</p>
-    <div class="success-track" id="successTrackNumber">AV000000</div>
-    <div class="success-actions">
-      <a class="btn btn-success" id="viewReceiptBtn" href="#" style="text-decoration:none;">🧾 Voir le reçu</a>
-      <button class="btn btn-primary" id="createAnotherBtn">+ Créer un autre colis</button>
-      <a class="btn btn-ghost" href="dashboard.html" style="text-decoration:none;">Retour au dashboard</a>
-    </div>
-  </div>
-
+<main id="mainContent">
+  <div class="loading-state" id="loadingState">Chargement de l'étiquette…</div>
 </main>
-
-<div class="navbar" id="navBar">
-  <button class="btn btn-ghost" id="prevBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Précédent</button>
-  <button class="btn btn-primary" id="nextBtn">Suivant <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-  <button class="btn btn-success" id="submitBtn" style="display:none;"><span class="spinner"></span><span>✓ Créer</span></button>
-</div>
 
 <script>
   // ============================================================
-  // CONFIGURATION FIREBASE — mêmes clés que login.html / dashboard.html
+  // CONFIGURATION FIREBASE — mêmes clés que sur les autres pages
   // ============================================================
   const firebaseConfig = {
     apiKey: "AIzaSyDoWCBh3rschFm97Z5Y7ax1bamhadDS42Q",
@@ -426,546 +121,111 @@
   const REQUIRE_AUTH = true;
   const LOGIN_URL = "connexion.html";
 
-  // Taux par défaut si aucun taux n'est défini dans Configuration > Routes & Tarifs
-  let GNF_PER_USD = 9345;
-  let TARIF_CBM = 700000; // GNF par m³ en maritime — ajustable via config/general.tarifCBM_GNF
-
-  // Coordonnées utilisées par le bouton "Au nom de l'entreprise" — adapte si besoin
-  const COMPANY_INFO = { nom: "Africa Vision Voyage", telephone: "612398318", email: "" };
-
-  // Destinations par défaut si la collection Firestore "destinations" est vide.
-  // Idéalement synchronisées avec ton module Configuration > Routes & Tarifs.
-  let transportMode = "aerien"; // "aerien" | "maritime"
-  document.getElementById('modeAerienBtn').addEventListener('click', () => setTransportMode('aerien'));
-  document.getElementById('modeMaritimeBtn').addEventListener('click', () => setTransportMode('maritime'));
-  function setTransportMode(mode){
-    transportMode = mode;
-    document.getElementById('modeAerienBtn').classList.toggle('active', mode === 'aerien');
-    document.getElementById('modeMaritimeBtn').classList.toggle('active', mode === 'maritime');
-    const badge = document.getElementById('summaryModeBadge');
-    if(badge) badge.textContent = mode === 'maritime' ? '🚢 Maritime' : '✈️ Aérien';
-    const feeLabel = document.getElementById('feeBaseLabel');
-    if(feeLabel) feeLabel.textContent = mode === 'maritime' ? 'Frais de base (volume) :' : 'Frais de base (poids) :';
-    if(typeof renderProducts === 'function') renderProducts();
-    if(typeof updateFees === 'function') updateFees();
-  }
-
-  let DESTINATIONS = [
-    {name:"ÉTATS-UNIS", dial:"+1", flag:"🇺🇸"},
-    {name:"FRANCE", dial:"+33", flag:"🇫🇷"},
-    {name:"BELGIQUE", dial:"+32", flag:"🇧🇪"},
-    {name:"ESPAGNE", dial:"+34", flag:"🇪🇸"},
-    {name:"CANADA", dial:"+1", flag:"🇨🇦"},
-    {name:"SÉNÉGAL", dial:"+221", flag:"🇸🇳"},
-    {name:"CÔTE D'IVOIRE", dial:"+225", flag:"🇨🇮"},
-    {name:"MALI", dial:"+223", flag:"🇲🇱"}
-  ];
-
-  // Catégories par défaut si la collection Firestore "categories" est vide.
-  // Idéalement synchronisées avec ton module Configuration > Catégories de Produits.
-  let CATEGORIES = [
-    {nom:"Nourriture", tarifKg:200000},
-    {nom:"Vêtements", tarifKg:150000},
-    {nom:"Électronique", tarifKg:350000},
-    {nom:"Documents", tarifKg:50000},
-    {nom:"Autre", tarifKg:180000}
-  ];
+  // Coordonnées de support affichées sur l'étiquette — adapte si besoin
+  const SUPPORT_EMAIL = "africavisionvoyage@gmail.com";
 
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.firestore();
 
-  const fmtGNF = n => new Intl.NumberFormat('fr-FR').format(Math.round(n||0)) + " GNF";
-  const fmtUSD = n => "≈ " + new Intl.NumberFormat('fr-FR', {maximumFractionDigits:1}).format((n||0)/GNF_PER_USD) + " USD";
-
-  // ---------------- STATE ----------------
-  let currentStep = 1;
-  let destIndex = 0;
-  let productSeq = 0;
-  let products = [];   // {id, nom, quantite, valeurUnitaire, poidsUnitaire, categorie}
-  let extraFees = [];  // {id, label, montant}
-  let feeSeq = 0;
-
-  function newProduct(){
-    productSeq++;
-    return {id:productSeq, nom:"", quantite:1, valeurUnitaire:0, poidsUnitaire:0, longueur:0, largeur:0, hauteur:0, categorie:CATEGORIES[0]?.nom || ""};
-  }
-  products.push(newProduct());
-
-  // ---------------- AUTH ----------------
-  let departCountry = "GUINÉE"; // par défaut ; remplacé par la route assignée de l'utilisateur si définie
-  let departDialCode = "+224";
-
-  function flagForCountry(name){
-    if(!name || name === "GUINÉE" || name === "GUINEE") return "🇬🇳";
-    const d = DESTINATIONS.find(x => x.name === name);
-    return (d && d.flag) || "🌍";
-  }
-  function dialForCountry(name){
-    if(!name || name === "GUINÉE" || name === "GUINEE") return "+224";
-    const d = DESTINATIONS.find(x => x.name === name);
-    return (d && d.dial) || "+224";
-  }
-
-  function applyDepartCountry(){
-    const label = document.getElementById('departLabel');
-    if(label) label.textContent = departCountry;
-    const summary = document.getElementById('summaryDepartFlag');
-    if(summary) summary.textContent = flagForCountry(departCountry) + ' ' + departCountry;
-    departDialCode = dialForCountry(departCountry);
-    const phoneCode = document.getElementById('departPhoneCode');
-    if(phoneCode) phoneCode.textContent = flagForCountry(departCountry) + ' ' + departDialCode;
-  }
-
-  async function loadUserRoute(user){
-    try{
-      const snap = await db.collection('utilisateurs').where('email', '==', user.email).limit(1).get();
-      if(snap.empty) return; // compte non listé = DGA par défaut, garde GUINÉE
-      const u = snap.docs[0].data();
-      if(u.role !== 'dga' && u.routeAssignee && u.routeAssignee.depart){
-        departCountry = u.routeAssignee.depart;
-        applyDepartCountry();
-      }
-    }catch(e){
-      console.warn("Impossible de charger la route assignée :", e);
-    }
-  }
+  const colisId = new URLSearchParams(window.location.search).get('id');
 
   auth.onAuthStateChanged(user => {
-    if(user){
-      window._currentUser = user;
-      loadUserRoute(user);
-    } else if(REQUIRE_AUTH){
-      window.location.href = LOGIN_URL;
-    }
+    if(user){ init(); }
+    else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
+    else { init(); }
   });
 
-  document.getElementById('quickfillSender').addEventListener('click', () => {
-    const u = window._currentUser;
-    if(!u){ showAlert("Connecte-toi pour utiliser cette option."); return; }
-    const parts = (u.displayName || "").split(" ");
-    document.getElementById('s_prenom').value = parts[0] || "";
-    document.getElementById('s_nom').value = parts.slice(1).join(" ") || "";
-    document.getElementById('s_email').value = u.email || "";
-  });
-
-  // ---------------- TAUX DE CHANGE (Firestore) ----------------
-  db.collection('config').doc('general').get().then(doc => {
-    if(doc.exists && doc.data().tauxChangeGNFUSD){
-      GNF_PER_USD = Number(doc.data().tauxChangeGNFUSD);
-      updateFees();
+  async function init(){
+    if(!colisId){
+      document.getElementById('mainContent').innerHTML = '<div class="error-state">Aucun colis spécifié.</div>';
+      return;
     }
-    if(doc.exists && doc.data().tarifCBM_GNF){
-      TARIF_CBM = Number(doc.data().tarifCBM_GNF);
-      updateFees();
-    }
-  }).catch(() => { /* on garde le taux par défaut */ });
-
-  // ---------------- CATEGORIES (Firestore) ----------------
-  db.collection('categories').get().then(snap => {
-    if(!snap.empty){
-      CATEGORIES = snap.docs.map(d => ({nom: d.data().nom, tarifKg: Number(d.data().tarifKg || d.data().tarifParKg || 0)}));
-      renderProducts();
-    }
-  }).catch(() => { /* on garde les catégories par défaut */ });
-
-  // ---------------- DESTINATIONS (Firestore) ----------------
-  db.collection('destinations').get().then(snap => {
-    if(!snap.empty){
-      DESTINATIONS = snap.docs.map(d => ({name: d.data().nom, dial: d.data().dial, flag: d.data().flag}));
-      renderDestinationOptions();
-      updateDestinationUI();
-      applyDepartCountry();
-    }
-  }).catch(() => { /* on garde les destinations par défaut */ });
-
-  // ---------------- DESTINATION ----------------
-  const destSelect = document.getElementById('destSelect');
-  function renderDestinationOptions(){
-    destSelect.innerHTML = '';
-    DESTINATIONS.forEach((d,i) => {
-      const opt = document.createElement('option');
-      opt.value = i; opt.textContent = d.flag + " " + d.name;
-      destSelect.appendChild(opt);
-    });
-  }
-  renderDestinationOptions();
-  destSelect.addEventListener('change', () => { destIndex = Number(destSelect.value); updateDestinationUI(); });
-  function updateDestinationUI(){
-    const d = DESTINATIONS[destIndex] || DESTINATIONS[0];
-    document.getElementById('destFlagIcon').textContent = d.flag;
-    document.getElementById('destNameLabel').textContent = d.name;
-    document.getElementById('destDialCode').textContent = d.dial;
-    document.getElementById('summaryDestFlag').textContent = d.flag + " " + d.name;
-  }
-  updateDestinationUI();
-
-  // ---------------- PRODUCTS ----------------
-  const productsContainer = document.getElementById('productsContainer');
-
-  function categoryOptions(selected){
-    return CATEGORIES.map(c => `<option value="${c.nom}" ${c.nom===selected?'selected':''}>${c.nom} — ${fmtGNF(c.tarifKg)}/kg</option>`).join('');
-  }
-
-  function renderProducts(){
-    productsContainer.innerHTML = "";
-    products.forEach((p, idx) => {
-      const row = document.createElement('div');
-      row.className = 'product-row';
-      row.dataset.id = p.id;
-      row.innerHTML = `
-        <div class="product-row-head">
-          <span class="tag">Produit ${idx+1}</span>
-          ${products.length>1 ? `<button class="remove-product" data-id="${p.id}">Supprimer</button>` : ''}
-        </div>
-        <div class="field">
-          <label>Nom du produit *</label>
-          <div class="input-shell"><input type="text" class="p-nom" placeholder="Ex : Nourriture, vêtements..." value="${p.nom}"></div>
-        </div>
-        <div class="grid-2">
-          <div class="field">
-            <label>Quantité *</label>
-            <div class="input-shell"><input type="number" class="p-qte" min="1" value="${p.quantite}"></div>
-          </div>
-          <div class="field">
-            <label>Valeur unitaire (GNF) *</label>
-            <div class="input-shell"><input type="number" class="p-val" min="0" value="${p.valeurUnitaire}"></div>
-          </div>
-        </div>
-        <div class="field poids-field" style="display:${transportMode==='maritime'?'none':'block'};">
-          <label>Poids unitaire (kg) *</label>
-          <div class="input-shell"><input type="number" class="p-poids" min="0" step="0.1" value="${p.poidsUnitaire}"></div>
-        </div>
-        <div class="field dims-field" style="display:${transportMode==='maritime'?'block':'none'};">
-          <label>Dimensions unitaires — L × l × H (cm) *</label>
-          <div class="grid-2" style="grid-template-columns:1fr 1fr 1fr; gap:8px;">
-            <div class="input-shell"><input type="number" class="p-long" min="0" step="1" placeholder="L" value="${p.longueur}"></div>
-            <div class="input-shell"><input type="number" class="p-larg" min="0" step="1" placeholder="l" value="${p.largeur}"></div>
-            <div class="input-shell"><input type="number" class="p-haut" min="0" step="1" placeholder="H" value="${p.hauteur}"></div>
-          </div>
-        </div>
-        <div class="field">
-          <label>Catégorie</label>
-          <div class="input-shell"><select class="p-cat">${categoryOptions(p.categorie)}</select></div>
-          <div class="cat-hint">${transportMode==='maritime' ? "Devient purement indicatif : le tarif maritime se base sur le volume, pas sur la catégorie" : "Détermine le tarif d'expédition au kg"}</div>
-        </div>
-        <div class="subtotal">
-          ${transportMode==='maritime' ? '<span>Volume : <strong class="sub-volume">0.000 m³</strong></span>' : '<span>Poids : <strong class="sub-poids">0.0 kg</strong></span>'}
-          <span>Valeur : <strong class="sub-valeur">0 GNF</strong></span>
-        </div>
-      `;
-      productsContainer.appendChild(row);
-
-      const q = row.querySelector('.p-nom'), qte = row.querySelector('.p-qte'),
-            val = row.querySelector('.p-val'), poids = row.querySelector('.p-poids'),
-            long = row.querySelector('.p-long'), larg = row.querySelector('.p-larg'), haut = row.querySelector('.p-haut'),
-            cat = row.querySelector('.p-cat');
-
-      function sync(){
-        p.nom = q.value; p.quantite = Number(qte.value)||0; p.valeurUnitaire = Number(val.value)||0;
-        p.categorie = cat.value;
-        if(poids) p.poidsUnitaire = Number(poids.value)||0;
-        if(long){ p.longueur = Number(long.value)||0; p.largeur = Number(larg.value)||0; p.hauteur = Number(haut.value)||0; }
-        const subPoids = row.querySelector('.sub-poids');
-        if(subPoids) subPoids.textContent = (p.quantite*p.poidsUnitaire).toFixed(1) + " kg";
-        const subVolume = row.querySelector('.sub-volume');
-        if(subVolume) subVolume.textContent = (p.quantite*(p.longueur*p.largeur*p.hauteur)/1e6).toFixed(3) + " m³";
-        row.querySelector('.sub-valeur').textContent = fmtGNF(p.quantite*p.valeurUnitaire);
-        updateProductTotals();
-      }
-      [q,qte,val,cat].forEach(el => el.addEventListener('input', sync));
-      if(poids) poids.addEventListener('input', sync);
-      if(long) [long,larg,haut].forEach(el => el.addEventListener('input', sync));
-      sync();
-
-      const rmBtn = row.querySelector('.remove-product');
-      if(rmBtn) rmBtn.addEventListener('click', () => {
-        products = products.filter(x => x.id !== p.id);
-        renderProducts();
-      });
-    });
-  }
-  document.getElementById('addProductBtn').addEventListener('click', () => {
-    products.push(newProduct());
-    renderProducts();
-  });
-
-  function updateProductTotals(){
-    const poidsT = products.reduce((s,p) => s + p.quantite*p.poidsUnitaire, 0);
-    const valT = products.reduce((s,p) => s + p.quantite*p.valeurUnitaire, 0);
-    document.getElementById('prodCount').textContent = products.length;
-    document.getElementById('prodTotals').textContent = transportMode === 'maritime'
-      ? computeTotalVolume().toFixed(3) + " m³ · " + fmtGNF(valT)
-      : poidsT.toFixed(1) + " kg · " + fmtGNF(valT);
-    updateFees();
-  }
-  renderProducts();
-
-  // ---------------- FEES ----------------
-  const extraFeesContainer = document.getElementById('extraFeesContainer');
-  function renderFees(){
-    extraFeesContainer.innerHTML = "";
-    extraFees.forEach(f => {
-      const row = document.createElement('div');
-      row.className = 'fee-line';
-      row.innerHTML = `
-        <input class="lbl-in" type="text" placeholder="Ex : Douane, assurance..." value="${f.label}">
-        <input class="amt-in" type="number" placeholder="GNF" value="${f.montant}">
-        <button aria-label="Retirer">✕</button>
-      `;
-      extraFeesContainer.appendChild(row);
-      const lblIn = row.querySelector('.lbl-in'), amtIn = row.querySelector('.amt-in');
-      lblIn.addEventListener('input', () => { f.label = lblIn.value; });
-      amtIn.addEventListener('input', () => { f.montant = Number(amtIn.value)||0; updateFees(); });
-      row.querySelector('button').addEventListener('click', () => {
-        extraFees = extraFees.filter(x => x.id !== f.id);
-        renderFees(); updateFees();
-      });
-    });
-  }
-  document.getElementById('addFeeBtn').addEventListener('click', () => {
-    feeSeq++; extraFees.push({id:feeSeq, label:"", montant:0}); renderFees();
-  });
-  document.getElementById('rabaisInput').addEventListener('input', updateFees);
-
-  function categoryTarif(nom){
-    const c = CATEGORIES.find(c => c.nom === nom);
-    return c ? c.tarifKg : 0;
-  }
-  function computeTotalVolume(){
-    return products.reduce((s,p) => s + p.quantite*((p.longueur*p.largeur*p.hauteur)/1e6), 0);
-  }
-  function computeFeeBase(){
-    if(transportMode === 'maritime'){
-      return computeTotalVolume() * TARIF_CBM;
-    }
-    return products.reduce((s,p) => s + (p.quantite*p.poidsUnitaire)*categoryTarif(p.categorie), 0);
-  }
-  function updateFees(){
-    const base = computeFeeBase();
-    const rabais = Number(document.getElementById('rabaisInput').value)||0;
-    const extrasTotal = extraFees.reduce((s,f) => s + (f.montant||0), 0);
-    const total = Math.max(0, base - rabais + extrasTotal);
-    document.getElementById('feeBaseDisplay').textContent = fmtGNF(base);
-    document.getElementById('feeTotalDisplay').textContent = fmtGNF(total);
-    document.getElementById('feeUsdNote').textContent = fmtUSD(total);
-  }
-  updateFees();
-
-  // ---------------- VALIDATION ----------------
-  function showAlert(msg){
-    document.getElementById('globalAlertMsg').textContent = msg;
-    document.getElementById('globalAlert').classList.add('show');
-    window.scrollTo({top:0, behavior:'smooth'});
-  }
-  function hideAlert(){ document.getElementById('globalAlert').classList.remove('show'); }
-
-  function validateStep(step){
-    hideAlert();
-    if(step === 1){
-      if(!val('s_nom') || !val('s_prenom') || !val('s_tel')){
-        showAlert("Merci de renseigner le nom, le prénom et le téléphone de l'expéditeur.");
-        return false;
-      }
-    }
-    if(step === 2){
-      if(!val('d_nom') || !val('d_prenom') || !val('d_tel') || !val('d_adresse')){
-        showAlert("Merci de renseigner le nom, le prénom, le téléphone et l'adresse du destinataire.");
-        return false;
-      }
-    }
-    if(step === 3){
-      for(const p of products){
-        if(!p.nom || p.quantite<=0){
-          showAlert("Chaque produit doit avoir un nom et une quantité supérieurs à 0.");
-          return false;
-        }
-        if(transportMode === 'maritime'){
-          if(p.longueur<=0 || p.largeur<=0 || p.hauteur<=0){
-            showAlert("Chaque produit doit avoir des dimensions (L × l × H) supérieures à 0 pour un envoi maritime.");
-            return false;
-          }
-        }else if(p.poidsUnitaire<=0){
-          showAlert("Chaque produit doit avoir un poids supérieur à 0.");
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-  function val(id){ return document.getElementById(id).value.trim(); }
-
-  // ---------------- NAVIGATION ----------------
-  const steps = document.querySelectorAll('.step');
-  const progressSpans = document.querySelectorAll('#progressBar span');
-  function renderStep(){
-    steps.forEach(s => s.classList.toggle('active', Number(s.dataset.step) === currentStep));
-    progressSpans.forEach((s,i) => {
-      s.classList.remove('done','current');
-      if(i < currentStep-1) s.classList.add('done');
-      else if(i === currentStep-1) s.classList.add('current');
-    });
-    document.getElementById('prevBtn').disabled = currentStep === 1;
-    document.getElementById('nextBtn').style.display = currentStep < 5 ? 'flex' : 'none';
-    document.getElementById('submitBtn').style.display = currentStep === 5 ? 'flex' : 'none';
-    destSelect.disabled = currentStep !== 1;
-    if(currentStep === 5) renderSummary();
-    hideAlert();
-    window.scrollTo({top:0, behavior:'smooth'});
-  }
-
-  document.getElementById('nextBtn').addEventListener('click', () => {
-    if(!validateStep(currentStep)) return;
-    currentStep = Math.min(5, currentStep+1);
-    renderStep();
-  });
-  document.getElementById('prevBtn').addEventListener('click', () => {
-    currentStep = Math.max(1, currentStep-1);
-    renderStep();
-  });
-
-  // ---------------- SUMMARY ----------------
-  function renderSummary(){
-    document.getElementById('summarySender').innerHTML = `
-      <strong>${val('s_prenom')} ${val('s_nom')}</strong>
-      Tél : ${departDialCode} ${val('s_tel')}<br>
-      ${val('s_email') ? 'Email : '+val('s_email')+'<br>' : ''}
-      Adresse : ${val('s_adresse') || 'Non renseignée'}
-    `;
-    const d = DESTINATIONS[destIndex];
-    document.getElementById('summaryReceiver').innerHTML = `
-      <strong>${val('d_prenom')} ${val('d_nom')}</strong>
-      Tél : ${d.dial} ${val('d_tel')}<br>
-      ${val('d_email') ? 'Email : '+val('d_email')+'<br>' : ''}
-      Adresse : ${val('d_adresse')}
-    `;
-    document.getElementById('summaryProducts').innerHTML = products.map(p => `
-      <div class="prod-line"><span>x${p.quantite} ${p.nom}</span><span>${transportMode==='maritime' ? (p.quantite*(p.longueur*p.largeur*p.hauteur)/1e6).toFixed(3)+' m³' : (p.quantite*p.poidsUnitaire).toFixed(1)+' kg'} · ${fmtGNF(p.quantite*p.valeurUnitaire)}</span></div>
-    `).join('');
-    const base = computeFeeBase();
-    const rabais = Number(document.getElementById('rabaisInput').value)||0;
-    const extrasTotal = extraFees.reduce((s,f)=>s+(f.montant||0),0);
-    const total = Math.max(0, base-rabais+extrasTotal);
-    document.getElementById('summaryFees').innerHTML = `
-      <div class="prod-line"><span>Frais de base</span><span>${fmtGNF(base)}</span></div>
-      ${rabais>0 ? `<div class="prod-line"><span>Rabais</span><span>-${fmtGNF(rabais)}</span></div>` : ''}
-      ${extraFees.map(f=>`<div class="prod-line"><span>${f.label||'Frais'}</span><span>${fmtGNF(f.montant)}</span></div>`).join('')}
-      <div class="prod-line"><strong>Total à payer</strong><strong>${fmtGNF(total)} (${fmtUSD(total)})</strong></div>
-      ${Number(document.getElementById('paiementInitial').value)>0 ? `<div class="prod-line"><span>Payé à la création (${document.getElementById('paiementMethode').value})</span><span>${fmtGNF(Number(document.getElementById('paiementInitial').value))}</span></div>` : ''}
-    `;
-  }
-
-  // ---------------- SUBMIT ----------------
-  function genTrackingNumber(){
-    const num = Math.floor(Math.random()*999999);
-    return "AV" + String(num).padStart(6, "0");
-  }
-
-  // Crée ou met à jour une fiche client dans la collection "clients"
-  // à partir du numéro de téléphone (utilisé comme identifiant unique).
-  async function upsertClient(person, role){
-    const key = phoneKey(person.telephone);
-    if(!key) return;
-    const ref = db.collection('clients').doc(key);
-    const field = role === 'expediteur' ? 'nbColisEnvoyes' : 'nbColisRecus';
     try{
-      const snap = await ref.get();
-      if(!snap.exists){
-        await ref.set({
-          nom: person.nom, prenom: person.prenom, telephone: person.telephone,
-          email: person.email||'', adresse: person.adresse||'',
-          nbColisEnvoyes: role==='expediteur' ? 1 : 0,
-          nbColisRecus: role==='destinataire' ? 1 : 0,
-          dateCreation: firebase.firestore.FieldValue.serverTimestamp(),
-          derniereActivite: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      }else{
-        const updates = {
-          nom: person.nom, prenom: person.prenom,
-          email: person.email || snap.data().email || '',
-          adresse: person.adresse || snap.data().adresse || '',
-          derniereActivite: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        updates[field] = firebase.firestore.FieldValue.increment(1);
-        await ref.update(updates);
+      const doc = await db.collection('colis').doc(colisId).get();
+      if(!doc.exists){
+        document.getElementById('mainContent').innerHTML = '<div class="error-state">Ce colis est introuvable.</div>';
+        return;
       }
-    }catch(err){
-      // On ne bloque jamais la création du colis si la fiche client échoue.
-      console.warn("Impossible de mettre à jour la fiche client :", err);
-    }
-  }
-  function phoneKey(tel){ return (tel||'').replace(/[^0-9]/g,''); }
-
-  document.getElementById('submitBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('submitBtn');
-    btn.disabled = true; btn.classList.add('loading');
-    hideAlert();
-
-    const base = computeFeeBase();
-    const rabais = Number(document.getElementById('rabaisInput').value)||0;
-    const extrasTotal = extraFees.reduce((s,f)=>s+(f.montant||0),0);
-    const total = Math.max(0, base-rabais+extrasTotal);
-    const d = DESTINATIONS[destIndex];
-    const trackingNumber = genTrackingNumber();
-
-    const payload = {
-      numeroSuivi: trackingNumber,
-      statut: "en_attente",
-      mode: transportMode,
-      route: { depart: departCountry, arrivee: d.name },
-      expediteur: { nom: val('s_nom'), prenom: val('s_prenom'), telephone: departDialCode+val('s_tel'), email: val('s_email'), adresse: val('s_adresse') },
-      destinataire: { nom: val('d_nom'), prenom: val('d_prenom'), telephone: d.dial+val('d_tel'), email: val('d_email'), adresse: val('d_adresse') },
-      produits: products.map(p => ({ nom:p.nom, quantite:p.quantite, valeurUnitaire:p.valeurUnitaire, poidsUnitaire:p.poidsUnitaire, categorie:p.categorie })),
-      poidsTotal: products.reduce((s,p)=>s+p.quantite*p.poidsUnitaire,0),
-      volumeTotal: computeTotalVolume(),
-      valeurTotal: products.reduce((s,p)=>s+p.quantite*p.valeurUnitaire,0),
-      frais: { fraisBase: base, rabais, extras: extraFees.map(f=>({label:f.label, montant:f.montant})), total },
-      dateCreation: firebase.firestore.FieldValue.serverTimestamp(),
-      creePar: window._currentUser ? window._currentUser.uid : null
-    };
-
-    try{
-      const docRef = await db.collection('colis').add(payload);
-      await Promise.all([
-        upsertClient(payload.expediteur, 'expediteur'),
-        upsertClient(payload.destinataire, 'destinataire')
-      ]);
-
-      const paiementInitial = Number(document.getElementById('paiementInitial').value)||0;
-      if(paiementInitial > 0){
-        try{
-          await db.collection('paiements').add({
-            colisId: docRef.id,
-            numeroSuivi: trackingNumber,
-            montant: paiementInitial,
-            methode: document.getElementById('paiementMethode').value,
-            notes: "Paiement à la création",
-            date: firebase.firestore.FieldValue.serverTimestamp(),
-            creePar: window._currentUser ? window._currentUser.uid : null
-          });
-        }catch(err){
-          console.warn("Colis créé mais le paiement initial n'a pas pu être enregistré :", err);
-        }
-      }
-
-      document.getElementById('successTrackNumber').textContent = trackingNumber;
-      document.getElementById('viewReceiptBtn').href = "recu.html?id=" + docRef.id;
-      document.getElementById('wizardWrap').style.display = 'none';
-      document.getElementById('navBar').style.display = 'none';
-      document.getElementById('successScreen').classList.add('show');
+      render(doc.data());
     }catch(err){
       console.error(err);
-      showAlert("Impossible de créer le colis. Vérifie la configuration Firebase et les règles Firestore.");
-    }finally{
-      btn.disabled = false; btn.classList.remove('loading');
+      document.getElementById('mainContent').innerHTML = '<div class="error-state">Impossible de charger l\u2019étiquette. Vérifie la configuration Firebase.</div>';
     }
-  });
+  }
 
-  document.getElementById('createAnotherBtn').addEventListener('click', () => {
-    window.location.reload();
-  });
+  function fmtDate(ts){
+    const d = ts && ts.toDate ? ts.toDate() : new Date();
+    return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+  }
 
-  renderStep();
+  function render(c){
+    const dest = c.destinataire || {};
+    const exp = c.expediteur || {};
+    const route = c.route || {};
+    const numeroSuivi = c.numeroSuivi || colisId;
+    const nbArticles = (c.produits||[]).reduce((s,p) => s + (Number(p.quantite)||0), 0) || 1;
+    const modeLabel = c.mode === "maritime" ? "MARITIME" : "AÉRIEN";
+    // Lien vers la page publique de suivi de colis — adapte si l'adresse change un jour
+    const TRACKING_BASE_URL = "https://souldtbah84-dotcom.github.io/Afrique-Vision-Suivi/";
+    const trackingLink = TRACKING_BASE_URL + "?num=" + encodeURIComponent(numeroSuivi);
+    const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=" + encodeURIComponent(trackingLink);
+
+    document.getElementById('mainContent').innerHTML = `
+      <div class="label" id="labelCard">
+        <div class="lbl-head">
+          <div class="lbl-title">Africa Vision<br>Multiservices</div>
+          <div class="mode-badge">${modeLabel}</div>
+        </div>
+
+        <div class="lbl-div lbl-section">
+          <div class="lbl-caption">DESTINATAIRE / TO</div>
+          <div class="lbl-name-lg">${[dest.prenom, dest.nom].filter(Boolean).join(' ')||'—'}</div>
+          <div class="lbl-city">${(dest.adresse||'').split(',')[0] || ''}</div>
+          <div class="lbl-row-between"><span>${route.arrivee||''}</span><span>${dest.telephone||''}</span></div>
+        </div>
+
+        <div class="lbl-div lbl-qr-row">
+          <img class="lbl-qr" src="${qrUrl}" alt="QR code de suivi">
+          <div>
+            <div class="lbl-caption">CODE DE SUIVI</div>
+            <div class="lbl-track-code">${numeroSuivi}</div>
+          </div>
+        </div>
+
+        <div class="lbl-div lbl-section">
+          <div class="lbl-caption">EXPÉDITEUR / FROM</div>
+          <div class="lbl-sender-row"><strong>${[exp.prenom, exp.nom].filter(Boolean).join(' ')||'—'}</strong><span>${exp.telephone||''}</span></div>
+          <div class="lbl-city">${(exp.adresse||'CONAKRY')}</div>
+        </div>
+
+        <div class="lbl-div lbl-footer-grid">
+          <div class="fg-col"><div class="lbl-caption">${c.mode==='maritime'?'VOLUME':'POIDS'}</div><div class="fg-val">${c.mode==='maritime' ? (c.volumeTotal||0).toFixed(3)+' m³' : (c.poidsTotal||0).toFixed(2)+' kg'}</div></div>
+          <div class="fg-col"><div class="lbl-caption">ARTICLES</div><div class="fg-val">${nbArticles}</div></div>
+          <div class="fg-col"><div class="lbl-caption">DATE</div><div class="fg-val">${fmtDate(c.dateCreation)}</div></div>
+        </div>
+
+        <div class="lbl-div lbl-ref-row">
+          <span class="lbl-caption" style="margin:0;">RÉF.</span>
+          <strong>${route.depart||'GUINEE'} → ${route.arrivee||''}</strong>
+        </div>
+
+        <div class="lbl-div lbl-legal">
+          Vérifier l'état du colis avant acceptation et émettre toute réserve en présence du livreur.
+          Transport soumis aux conditions générales d'Africa Vision Multiservices.
+          Support : ${SUPPORT_EMAIL}
+        </div>
+
+        <div class="lbl-div lbl-domain">AFRICA VISION MULTISERVICES</div>
+      </div>
+
+      <div class="actions-bar">
+        <button class="btn btn-primary" id="printBtn">🖨️ Imprimer / Télécharger (PDF)</button>
+      </div>
+    `;
+
+    document.getElementById('printBtn').addEventListener('click', () => window.print());
+  }
 </script>
 
 
