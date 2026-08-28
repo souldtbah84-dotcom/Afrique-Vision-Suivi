@@ -45,11 +45,13 @@
   }
   .route-bar .lbl{color:var(--slate); white-space:nowrap;}
   .route-bar strong{font-weight:700;}
-  select#destSelect{
-    margin-left:auto; border:1px solid var(--line); border-radius:9px; padding:8px 10px; font-size:13px;
-    background:#fff; color:var(--ink); font-family:inherit; max-width:190px;
+  .route-bar{flex-wrap:wrap;}
+  select#departSelect, select#destSelect{
+    border:1px solid var(--line); border-radius:9px; padding:8px 10px; font-size:13px;
+    background:#fff; color:var(--ink); font-family:inherit; max-width:190px; cursor:pointer;
   }
-  select#destSelect:disabled{background:var(--cream); color:var(--slate);}
+  select#destSelect{margin-left:auto;}
+  select#departSelect:disabled, select#destSelect:disabled{background:var(--cream); color:var(--slate); cursor:default;}
   .route-note{font-size:11px; color:var(--slate-light); margin:-12px 0 18px 2px;}
 
   .mode-toggle{display:flex; gap:8px; margin-bottom:18px;}
@@ -93,7 +95,7 @@
   .input-shell:focus-within{border-color:var(--navy-700); box-shadow:0 0 0 3px rgba(30,63,120,.12);}
   input, select, textarea{width:100%; border:none; outline:none; background:transparent; padding:12px; font-size:14.5px; font-family:inherit; color:var(--ink);}
   .phone-row{display:flex; gap:8px;}
-  .phone-code{flex:none; width:88px; display:flex; align-items:center; gap:6px; border:1.5px solid #e3ddcd; border-radius:11px; padding:0 10px; background:#fff; font-size:14px; color:var(--slate);}
+  .phone-code{flex:none; min-width:92px; white-space:nowrap; display:flex; align-items:center; gap:6px; border:1.5px solid #e3ddcd; border-radius:11px; padding:0 10px; background:#fff; font-size:14px; color:var(--slate);}
   .phone-row .input-shell{flex:1;}
   .quickfill{font-size:12.5px; color:var(--navy-700); font-weight:600; background:none; border:none; cursor:pointer; padding:0; margin-bottom:14px;}
   .quickfill:hover{text-decoration:underline;}
@@ -189,8 +191,10 @@
 
   <div id="wizardWrap">
     <div class="route-bar">
-      <span class="lbl">Envoi de</span> <strong id="departLabel">GUINÉE</strong> <span class="lbl">vers</span>
-      <select id="destSelect"></select>
+      <span class="lbl">Envoi de</span>
+      <select id="departSelect" aria-label="Pays de départ"></select>
+      <span class="lbl">vers</span>
+      <select id="destSelect" aria-label="Pays de destination"></select>
     </div>
     <div class="route-note">Modifiable uniquement au début de la saisie</div>
 
@@ -216,8 +220,8 @@
         <div><h2>Expéditeur</h2><div class="step-of">Étape 1 sur 5</div></div>
       </div>
       <div class="intro-banner sender">
-        <div class="ic">🇬🇳</div>
-        <div><div class="tt">Expéditeur · Guinée</div><div class="ss">Personne qui envoie le colis</div></div>
+        <div class="ic" id="departFlagIcon">🇬🇳</div>
+        <div><div class="tt">Expéditeur · <span id="departLabel">GUINÉE</span></div><div class="ss">Personne qui envoie le colis</div></div>
       </div>
 
       <button class="quickfill" id="quickfillSender">↳ Utiliser mes coordonnées de connexion</button>
@@ -496,20 +500,52 @@
   let departCountry = "GUINÉE"; // par défaut ; remplacé par la route assignée de l'utilisateur si définie
   let departDialCode = "+224";
 
-  function flagForCountry(name){
-    if(!name || name === "GUINÉE" || name === "GUINEE") return "🇬🇳";
-    const d = DESTINATIONS.find(x => x.name === name);
-    return (d && d.flag) || "🌍";
+  // Un pays configuré dans Firestore peut stocker son drapeau sous forme d'emoji
+  // ("🇪🇬") ou de code à deux lettres ("EG"). On accepte les deux.
+  function toFlagEmoji(v){
+    const s = (v || "").toString().trim();
+    if(!s) return "🌍";
+    if(/^[A-Za-z]{2}$/.test(s)){
+      return String.fromCodePoint(...[...s.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+    }
+    return s;
   }
-  function dialForCountry(name){
-    if(!name || name === "GUINÉE" || name === "GUINEE") return "+224";
-    const d = DESTINATIONS.find(x => x.name === name);
-    return (d && d.dial) || "+224";
+
+  const PAYS_BASE = {name:"GUINÉE", dial:"+224", flag:"🇬🇳"};
+
+  // Pays proposés au départ : la Guinée plus tous les pays configurés en destination.
+  function departPool(){
+    const pool = [PAYS_BASE];
+    DESTINATIONS.forEach(d => { if(!pool.some(x => x.name === d.name)) pool.push(d); });
+    return pool;
+  }
+  function findPays(name){
+    return departPool().find(x => x.name === name) || PAYS_BASE;
+  }
+  function flagForCountry(name){ return toFlagEmoji(findPays(name).flag); }
+  function dialForCountry(name){ return findPays(name).dial || "+224"; }
+
+  const departSelect = document.getElementById('departSelect');
+
+  function renderDepartOptions(){
+    const pool = departPool();
+    departSelect.innerHTML = '';
+    pool.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.name;
+      opt.textContent = toFlagEmoji(p.flag) + " " + p.name;
+      departSelect.appendChild(opt);
+    });
+    if(!pool.some(p => p.name === departCountry)) departCountry = PAYS_BASE.name;
+    departSelect.value = departCountry;
   }
 
   function applyDepartCountry(){
+    if(departSelect && departSelect.value !== departCountry) departSelect.value = departCountry;
     const label = document.getElementById('departLabel');
     if(label) label.textContent = departCountry;
+    const icon = document.getElementById('departFlagIcon');
+    if(icon) icon.textContent = flagForCountry(departCountry);
     const summary = document.getElementById('summaryDepartFlag');
     if(summary) summary.textContent = flagForCountry(departCountry) + ' ' + departCountry;
     departDialCode = dialForCountry(departCountry);
@@ -517,13 +553,24 @@
     if(phoneCode) phoneCode.textContent = flagForCountry(departCountry) + ' ' + departDialCode;
   }
 
+  departSelect.addEventListener('change', () => {
+    departCountry = departSelect.value;
+    applyDepartCountry();
+  });
+
+  renderDepartOptions();
+  applyDepartCountry();
+
   async function loadUserRoute(user){
     try{
       const snap = await db.collection('utilisateurs').where('email', '==', user.email).limit(1).get();
       if(snap.empty) return; // compte non listé = DGA par défaut, garde GUINÉE
       const u = snap.docs[0].data();
-      if(u.role !== 'dga' && u.routeAssignee && u.routeAssignee.depart){
+      // La route assignée sert de valeur par défaut ; l'agent reste libre de
+      // choisir un autre pays de départ (envoi parti de Chine, d'Égypte, etc.).
+      if(u.routeAssignee && u.routeAssignee.depart){
         departCountry = u.routeAssignee.depart;
+        renderDepartOptions();
         applyDepartCountry();
       }
     }catch(e){
@@ -575,6 +622,7 @@
       DESTINATIONS = snap.docs.map(d => ({name: d.data().nom, dial: d.data().dial, flag: d.data().flag}));
       renderDestinationOptions();
       updateDestinationUI();
+      renderDepartOptions();
       applyDepartCountry();
     }
   }).catch(() => { /* on garde les destinations par défaut */ });
@@ -593,10 +641,12 @@
   destSelect.addEventListener('change', () => { destIndex = Number(destSelect.value); updateDestinationUI(); });
   function updateDestinationUI(){
     const d = DESTINATIONS[destIndex] || DESTINATIONS[0];
-    document.getElementById('destFlagIcon').textContent = d.flag;
+    if(!d) return;
+    const flag = toFlagEmoji(d.flag);
+    document.getElementById('destFlagIcon').textContent = flag;
     document.getElementById('destNameLabel').textContent = d.name;
-    document.getElementById('destDialCode').textContent = d.dial;
-    document.getElementById('summaryDestFlag').textContent = d.flag + " " + d.name;
+    document.getElementById('destDialCode').textContent = flag + " " + (d.dial || "");
+    document.getElementById('summaryDestFlag').textContent = flag + " " + d.name;
   }
   updateDestinationUI();
 
@@ -763,6 +813,11 @@
   function validateStep(step){
     hideAlert();
     if(step === 1){
+      const dSel = DESTINATIONS[destIndex];
+      if(dSel && dSel.name === departCountry){
+        showAlert("Le pays de départ et le pays de destination sont identiques. Choisissez deux pays différents.");
+        return false;
+      }
       if(!val('s_nom') || !val('s_prenom') || !val('s_tel')){
         showAlert("Merci de renseigner le nom, le prénom et le téléphone de l'expéditeur.");
         return false;
@@ -809,6 +864,7 @@
     document.getElementById('nextBtn').style.display = currentStep < 5 ? 'flex' : 'none';
     document.getElementById('submitBtn').style.display = currentStep === 5 ? 'flex' : 'none';
     destSelect.disabled = currentStep !== 1;
+    departSelect.disabled = currentStep !== 1;
     if(currentStep === 5) renderSummary();
     hideAlert();
     window.scrollTo({top:0, behavior:'smooth'});
