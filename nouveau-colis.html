@@ -85,6 +85,10 @@
   .intro-banner.product{background:#fdf2de;}
   .intro-banner.fee{background:#fdf2de;}
   .intro-banner.summary{background:#e8f6ee;}
+  .flag-img{width:22px; height:16px; object-fit:cover; border-radius:3px; flex:none;
+    box-shadow:0 0 0 1px rgba(0,0,0,0.10); vertical-align:-3px;}
+  .intro-banner .ic .flag-img{width:26px; height:19px;}
+  .flag-code{font-size:11px; font-weight:700; letter-spacing:0.04em; color:var(--slate);}
   .intro-banner .ic{width:38px; height:38px; border-radius:10px; background:#fff; display:flex; align-items:center; justify-content:center; flex:none;}
   .intro-banner .tt{font-weight:700; font-size:14.5px;}
   .intro-banner .ss{font-size:12.5px; color:var(--slate);}
@@ -220,7 +224,7 @@
         <div><h2>Expéditeur</h2><div class="step-of">Étape 1 sur 5</div></div>
       </div>
       <div class="intro-banner sender">
-        <div class="ic" id="departFlagIcon">🇬🇳</div>
+        <div class="ic" id="departFlagIcon"></div>
         <div><div class="tt">Expéditeur · <span id="departLabel">GUINÉE</span></div><div class="ss">Personne qui envoie le colis</div></div>
       </div>
 
@@ -237,7 +241,7 @@
       <div class="field">
         <label>Téléphone *</label>
         <div class="phone-row">
-          <div class="phone-code" id="departPhoneCode">🇬🇳 +224</div>
+          <div class="phone-code" id="departPhoneCode">+224</div>
           <div class="input-shell"><input type="tel" id="s_tel" placeholder="6XX XXX XXX"></div>
         </div>
       </div>
@@ -258,7 +262,7 @@
         <div><h2>Destinataire</h2><div class="step-of">Étape 2 sur 5</div></div>
       </div>
       <div class="intro-banner receiver">
-        <div class="ic" id="destFlagIcon">🌍</div>
+        <div class="ic" id="destFlagIcon"></div>
         <div><div class="tt">Destinataire · <span id="destNameLabel">—</span></div><div class="ss">Personne qui recevra le colis</div></div>
       </div>
 
@@ -372,7 +376,7 @@
       </div>
 
       <div class="route-bar" style="justify-content:center; gap:14px;">
-        <span id="summaryDepartFlag">🇬🇳 GUINÉE</span> → <span id="summaryDestFlag">🌍 —</span>
+        <span id="summaryDepartFlag">GUINÉE</span> → <span id="summaryDestFlag">—</span>
         <span id="summaryModeBadge" style="font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px; background:var(--cream);">✈️ Aérien</span>
       </div>
 
@@ -497,18 +501,64 @@
   products.push(newProduct());
 
   // ---------------- AUTH ----------------
+  console.log("Nouveau colis — v2 : sélecteur de pays au départ + drapeaux en image");
   let departCountry = "GUINÉE"; // par défaut ; remplacé par la route assignée de l'utilisateur si définie
   let departDialCode = "+224";
 
-  // Un pays configuré dans Firestore peut stocker son drapeau sous forme d'emoji
-  // ("🇪🇬") ou de code à deux lettres ("EG"). On accepte les deux.
-  function toFlagEmoji(v){
-    const s = (v || "").toString().trim();
-    if(!s) return "🌍";
-    if(/^[A-Za-z]{2}$/.test(s)){
-      return String.fromCodePoint(...[...s.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+  /* ---------------- DRAPEAUX ----------------
+     Windows n'a pas de police pour les drapeaux emoji : "🇬🇳" s'y affiche
+     "GN". On passe donc par une petite image, identique sur PC et mobile.
+     Le champ "flag" de Firestore peut valoir un emoji ou un code à deux
+     lettres ; à défaut, le code est déduit du nom du pays.               */
+  const NOM_VERS_ISO = {
+    "GUINÉE":"GN", "GUINEE":"GN", "CHINE":"CN", "ÉGYPTE":"EG", "EGYPTE":"EG",
+    "ÉTATS-UNIS":"US", "ETATS-UNIS":"US", "FRANCE":"FR", "BELGIQUE":"BE",
+    "ESPAGNE":"ES", "CANADA":"CA", "SÉNÉGAL":"SN", "SENEGAL":"SN",
+    "CÔTE D'IVOIRE":"CI", "COTE D'IVOIRE":"CI", "MALI":"ML", "MAROC":"MA",
+    "ALGÉRIE":"DZ", "TUNISIE":"TN", "TURQUIE":"TR", "ÉMIRATS ARABES UNIS":"AE",
+    "DUBAI":"AE", "DUBAÏ":"AE", "ARABIE SAOUDITE":"SA", "QATAR":"QA",
+    "SIERRA LEONE":"SL", "LIBÉRIA":"LR", "LIBERIA":"LR", "GAMBIE":"GM",
+    "GUINÉE-BISSAU":"GW", "MAURITANIE":"MR", "BURKINA FASO":"BF", "GHANA":"GH",
+    "NIGÉRIA":"NG", "NIGERIA":"NG", "TOGO":"TG", "BÉNIN":"BJ", "CAMEROUN":"CM",
+    "GABON":"GA", "ROYAUME-UNI":"GB", "ALLEMAGNE":"DE", "ITALIE":"IT",
+    "PORTUGAL":"PT", "PAYS-BAS":"NL", "INDE":"IN", "HONG KONG":"HK",
+    "VIÊT NAM":"VN", "VIETNAM":"VN", "THAÏLANDE":"TH", "MALAISIE":"MY"
+  };
+
+  function isoDepuisFlag(v){
+    const t = (v || "").toString().trim();
+    if(/^[A-Za-z]{2}$/.test(t)) return t.toUpperCase();
+    const cps = [...t].map(c => c.codePointAt(0));
+    if(cps.length === 2 && cps.every(c => c >= 0x1F1E6 && c <= 0x1F1FF)){
+      return cps.map(c => String.fromCharCode(c - 0x1F1E6 + 65)).join('');
     }
-    return s;
+    return "";
+  }
+  function isoPays(p){
+    return isoDepuisFlag(p && p.flag) || NOM_VERS_ISO[((p && p.name) || "").toUpperCase()] || "";
+  }
+  function noeudDrapeau(p){
+    const iso = isoPays(p);
+    if(!iso){ const sp = document.createElement('span'); sp.className = 'flag-code'; sp.textContent = "??"; return sp; }
+    const img = document.createElement('img');
+    img.className = 'flag-img';
+    img.alt = iso;
+    img.src = 'https://flagcdn.com/w40/' + iso.toLowerCase() + '.png';
+    img.srcset = 'https://flagcdn.com/w80/' + iso.toLowerCase() + '.png 2x';
+    // Si le CDN est injoignable, on retombe sur le code pays en texte.
+    img.addEventListener('error', () => {
+      const sp = document.createElement('span');
+      sp.className = 'flag-code';
+      sp.textContent = iso;
+      if(img.parentNode) img.parentNode.replaceChild(sp, img);
+    });
+    return img;
+  }
+  function poserDrapeau(el, p, texte){
+    if(!el) return;
+    el.textContent = '';
+    el.appendChild(noeudDrapeau(p));
+    if(texte) el.appendChild(document.createTextNode(' ' + texte));
   }
 
   const PAYS_BASE = {name:"GUINÉE", dial:"+224", flag:"🇬🇳"};
@@ -522,7 +572,6 @@
   function findPays(name){
     return departPool().find(x => x.name === name) || PAYS_BASE;
   }
-  function flagForCountry(name){ return toFlagEmoji(findPays(name).flag); }
   function dialForCountry(name){ return findPays(name).dial || "+224"; }
 
   const departSelect = document.getElementById('departSelect');
@@ -533,7 +582,7 @@
     pool.forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.name;
-      opt.textContent = toFlagEmoji(p.flag) + " " + p.name;
+      opt.textContent = p.name + " (" + (p.dial || "") + ")";
       departSelect.appendChild(opt);
     });
     if(!pool.some(p => p.name === departCountry)) departCountry = PAYS_BASE.name;
@@ -542,15 +591,13 @@
 
   function applyDepartCountry(){
     if(departSelect && departSelect.value !== departCountry) departSelect.value = departCountry;
+    const pays = findPays(departCountry);
     const label = document.getElementById('departLabel');
     if(label) label.textContent = departCountry;
-    const icon = document.getElementById('departFlagIcon');
-    if(icon) icon.textContent = flagForCountry(departCountry);
-    const summary = document.getElementById('summaryDepartFlag');
-    if(summary) summary.textContent = flagForCountry(departCountry) + ' ' + departCountry;
+    poserDrapeau(document.getElementById('departFlagIcon'), pays, '');
+    poserDrapeau(document.getElementById('summaryDepartFlag'), pays, departCountry);
     departDialCode = dialForCountry(departCountry);
-    const phoneCode = document.getElementById('departPhoneCode');
-    if(phoneCode) phoneCode.textContent = flagForCountry(departCountry) + ' ' + departDialCode;
+    poserDrapeau(document.getElementById('departPhoneCode'), pays, departDialCode);
   }
 
   departSelect.addEventListener('change', () => {
@@ -633,7 +680,7 @@
     destSelect.innerHTML = '';
     DESTINATIONS.forEach((d,i) => {
       const opt = document.createElement('option');
-      opt.value = i; opt.textContent = d.flag + " " + d.name;
+      opt.value = i; opt.textContent = d.name + " (" + (d.dial || "") + ")";
       destSelect.appendChild(opt);
     });
   }
@@ -642,11 +689,10 @@
   function updateDestinationUI(){
     const d = DESTINATIONS[destIndex] || DESTINATIONS[0];
     if(!d) return;
-    const flag = toFlagEmoji(d.flag);
-    document.getElementById('destFlagIcon').textContent = flag;
     document.getElementById('destNameLabel').textContent = d.name;
-    document.getElementById('destDialCode').textContent = flag + " " + (d.dial || "");
-    document.getElementById('summaryDestFlag').textContent = flag + " " + d.name;
+    poserDrapeau(document.getElementById('destFlagIcon'), d, '');
+    poserDrapeau(document.getElementById('destDialCode'), d, d.dial || "");
+    poserDrapeau(document.getElementById('summaryDestFlag'), d, d.name);
   }
   updateDestinationUI();
 
