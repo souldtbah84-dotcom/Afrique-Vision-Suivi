@@ -116,6 +116,14 @@
   }
   .add-product:hover{background:#fff;}
   .cat-hint{font-size:11.5px; color:var(--slate-light); margin-top:6px;}
+  .libre-switch{
+    display:flex; align-items:center; gap:8px; margin-bottom:9px; cursor:pointer;
+    font-size:12.5px; font-weight:600; color:var(--navy-800);
+    background:#eaf0fb; border:1px solid #d3e0f5; border-radius:10px; padding:9px 11px;
+  }
+  .libre-switch input{width:16px; height:16px; accent-color:var(--navy-700); flex:none; margin:0;}
+  .cat-libre .grid-2{grid-template-columns:1fr 1fr; gap:8px;}
+  .unit-suffix{padding-right:12px; font-size:12px; font-weight:600; color:var(--slate-light); white-space:nowrap;}
 
   .totals-strip{display:flex; justify-content:space-between; align-items:center; padding:14px 4px 4px; font-size:14px; border-top:1px dashed var(--line); margin-top:6px;}
   .totals-strip strong{font-family:'Space Grotesk',sans-serif; font-size:16px;}
@@ -436,7 +444,7 @@
 
   // Taux par défaut si aucun taux n'est défini dans Configuration > Routes & Tarifs
   let GNF_PER_USD = 9345;
-  let TARIF_CBM = 700000; // GNF par m³ en maritime — ajustable via config/general.tarifCBM_GNF
+  let TARIF_CBM = 700000; // GNF par CBM en maritime — ajustable via config/general.tarifCBM_GNF
 
   // Coordonnées utilisées par le bouton "Au nom de l'entreprise" — adapte si besoin
   const COMPANY_INFO = { nom: "Africa Vision Voyage", telephone: "612398318", email: "" };
@@ -453,7 +461,7 @@
     const badge = document.getElementById('summaryModeBadge');
     if(badge) badge.textContent = mode === 'maritime' ? '🚢 Maritime' : '✈️ Aérien';
     const feeLabel = document.getElementById('feeBaseLabel');
-    if(feeLabel) feeLabel.textContent = mode === 'maritime' ? 'Frais de base (volume) :' : 'Frais de base (poids) :';
+    if(feeLabel) feeLabel.textContent = mode === 'maritime' ? 'Frais de base (CBM) :' : 'Frais de base (poids) :';
     if(typeof renderProducts === 'function') renderProducts();
     if(typeof updateFees === 'function') updateFees();
   }
@@ -490,13 +498,20 @@
   let currentStep = 1;
   let destIndex = 0;
   let productSeq = 0;
-  let products = [];   // {id, nom, quantite, valeurUnitaire, poidsUnitaire, categorie}
+  // {id, nom, quantite, valeurUnitaire, poidsUnitaire, categorie,
+  //  tarifLibre, categorieLibre, montantLibre}
+  let products = [];
   let extraFees = [];  // {id, label, montant}
   let feeSeq = 0;
 
   function newProduct(){
     productSeq++;
-    return {id:productSeq, nom:"", quantite:1, valeurUnitaire:0, poidsUnitaire:0, longueur:0, largeur:0, hauteur:0, categorie:CATEGORIES[0]?.nom || ""};
+    return {
+      id:productSeq, nom:"", quantite:1, valeurUnitaire:0, poidsUnitaire:0,
+      longueur:0, largeur:0, hauteur:0, categorie:CATEGORIES[0]?.nom || "",
+      // Maritime uniquement : catégorie et montant écrits à la main par l'agent
+      tarifLibre:false, categorieLibre:"", montantLibre:0
+    };
   }
   products.push(newProduct());
 
@@ -699,6 +714,9 @@
   // ---------------- PRODUCTS ----------------
   const productsContainer = document.getElementById('productsContainer');
 
+  // Un guillemet dans un nom de produit ou une catégorie casserait l'attribut value=""
+  const escAttr = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
   function categoryOptions(selected){
     return CATEGORIES.map(c => `<option value="${c.nom}" ${c.nom===selected?'selected':''}>${c.nom} — ${fmtGNF(c.tarifKg)}/kg</option>`).join('');
   }
@@ -716,7 +734,7 @@
         </div>
         <div class="field">
           <label>Nom du produit *</label>
-          <div class="input-shell"><input type="text" class="p-nom" placeholder="Ex : Nourriture, vêtements..." value="${p.nom}"></div>
+          <div class="input-shell"><input type="text" class="p-nom" placeholder="Ex : Nourriture, vêtements..." value="${escAttr(p.nom)}"></div>
         </div>
         <div class="grid-2">
           <div class="field">
@@ -742,11 +760,30 @@
         </div>
         <div class="field">
           <label>Catégorie</label>
-          <div class="input-shell"><select class="p-cat">${categoryOptions(p.categorie)}</select></div>
-          <div class="cat-hint">${transportMode==='maritime' ? "Devient purement indicatif : le tarif maritime se base sur le volume, pas sur la catégorie" : "Détermine le tarif d'expédition au kg"}</div>
+          ${transportMode==='maritime' ? `
+            <label class="libre-switch">
+              <input type="checkbox" class="p-libre" ${p.tarifLibre?'checked':''}>
+              Écrire moi-même la catégorie et le montant
+            </label>
+            <div class="cat-standard" style="display:${p.tarifLibre?'none':'block'};">
+              <div class="input-shell"><select class="p-cat">${categoryOptions(p.categorie)}</select></div>
+              <div class="cat-hint">Indicatif : le tarif appliqué est le tarif maritime général, ${fmtGNF(TARIF_CBM)} par CBM</div>
+            </div>
+            <div class="cat-libre" style="display:${p.tarifLibre?'block':'none'};">
+              <div class="input-shell"><input type="text" class="p-catlibre" placeholder="Catégorie — ex : Moteur, meubles, carrelage..." value="${escAttr(p.categorieLibre)}"></div>
+              <div class="input-shell" style="margin-top:8px;">
+                <input type="number" class="p-montant" min="0" placeholder="Montant par CBM (GNF)" value="${p.montantLibre||0}">
+                <span class="unit-suffix">GNF / CBM</span>
+              </div>
+              <div class="cat-hint p-libre-hint"></div>
+            </div>
+          ` : `
+            <div class="input-shell"><select class="p-cat">${categoryOptions(p.categorie)}</select></div>
+            <div class="cat-hint">Détermine le tarif d'expédition au kg</div>
+          `}
         </div>
         <div class="subtotal">
-          ${transportMode==='maritime' ? '<span>Volume : <strong class="sub-volume">0.000 m³</strong></span>' : '<span>Poids : <strong class="sub-poids">0.0 kg</strong></span>'}
+          ${transportMode==='maritime' ? '<span>Volume : <strong class="sub-volume">0.000 CBM</strong></span>' : '<span>Poids : <strong class="sub-poids">0.0 kg</strong></span>'}
           <span>Valeur : <strong class="sub-valeur">0 GNF</strong></span>
         </div>
       `;
@@ -755,23 +792,44 @@
       const q = row.querySelector('.p-nom'), qte = row.querySelector('.p-qte'),
             val = row.querySelector('.p-val'), poids = row.querySelector('.p-poids'),
             long = row.querySelector('.p-long'), larg = row.querySelector('.p-larg'), haut = row.querySelector('.p-haut'),
-            cat = row.querySelector('.p-cat');
+            cat = row.querySelector('.p-cat'),
+            libre = row.querySelector('.p-libre'), catLibre = row.querySelector('.p-catlibre'),
+            montant = row.querySelector('.p-montant');
 
       function sync(){
         p.nom = q.value; p.quantite = Number(qte.value)||0; p.valeurUnitaire = Number(val.value)||0;
         p.categorie = cat.value;
         if(poids) p.poidsUnitaire = Number(poids.value)||0;
         if(long){ p.longueur = Number(long.value)||0; p.largeur = Number(larg.value)||0; p.hauteur = Number(haut.value)||0; }
+
+        // Maritime : bascule entre catégorie enregistrée et saisie libre
+        if(libre){
+          p.tarifLibre = libre.checked;
+          p.categorieLibre = catLibre.value;
+          p.montantLibre = Number(montant.value)||0;
+          row.querySelector('.cat-standard').style.display = p.tarifLibre ? 'none' : 'block';
+          row.querySelector('.cat-libre').style.display = p.tarifLibre ? 'block' : 'none';
+          const hint = row.querySelector('.p-libre-hint');
+          if(hint){
+            const vol = p.quantite*((p.longueur*p.largeur*p.hauteur)/1e6);
+            hint.textContent = fmtGNF(p.montantLibre) + " × " + vol.toFixed(3) + " CBM = " + fmtGNF(p.montantLibre*vol);
+          }
+        }
+
         const subPoids = row.querySelector('.sub-poids');
         if(subPoids) subPoids.textContent = (p.quantite*p.poidsUnitaire).toFixed(1) + " kg";
         const subVolume = row.querySelector('.sub-volume');
-        if(subVolume) subVolume.textContent = (p.quantite*(p.longueur*p.largeur*p.hauteur)/1e6).toFixed(3) + " m³";
+        if(subVolume) subVolume.textContent = (p.quantite*(p.longueur*p.largeur*p.hauteur)/1e6).toFixed(3) + " CBM";
         row.querySelector('.sub-valeur').textContent = fmtGNF(p.quantite*p.valeurUnitaire);
         updateProductTotals();
       }
       [q,qte,val,cat].forEach(el => el.addEventListener('input', sync));
       if(poids) poids.addEventListener('input', sync);
       if(long) [long,larg,haut].forEach(el => el.addEventListener('input', sync));
+      if(libre){
+        libre.addEventListener('change', sync);
+        [catLibre, montant].forEach(el => el.addEventListener('input', sync));
+      }
       sync();
 
       const rmBtn = row.querySelector('.remove-product');
@@ -791,7 +849,7 @@
     const valT = products.reduce((s,p) => s + p.quantite*p.valeurUnitaire, 0);
     document.getElementById('prodCount').textContent = products.length;
     document.getElementById('prodTotals').textContent = transportMode === 'maritime'
-      ? computeTotalVolume().toFixed(3) + " m³ · " + fmtGNF(valT)
+      ? computeTotalVolume().toFixed(3) + " CBM · " + fmtGNF(valT)
       : poidsT.toFixed(1) + " kg · " + fmtGNF(valT);
     updateFees();
   }
@@ -829,13 +887,28 @@
     return c ? c.tarifKg : 0;
   }
   function computeTotalVolume(){
-    return products.reduce((s,p) => s + p.quantite*((p.longueur*p.largeur*p.hauteur)/1e6), 0);
+    return products.reduce((s,p) => s + productVolume(p), 0);
+  }
+  function productVolume(p){
+    return p.quantite*((p.longueur*p.largeur*p.hauteur)/1e6);
+  }
+  // Frais d'une ligne en maritime : montant par CBM × volume de la ligne.
+  // Le montant est soit celui écrit à la main, soit le tarif maritime général.
+  function productFeeMaritime(p){
+    const tarif = p.tarifLibre ? (Number(p.montantLibre)||0) : TARIF_CBM;
+    return productVolume(p) * tarif;
   }
   function computeFeeBase(){
     if(transportMode === 'maritime'){
-      return computeTotalVolume() * TARIF_CBM;
+      return products.reduce((s,p) => s + productFeeMaritime(p), 0);
     }
     return products.reduce((s,p) => s + (p.quantite*p.poidsUnitaire)*categoryTarif(p.categorie), 0);
+  }
+  // Catégorie retenue pour l'enregistrement et les documents
+  function effectiveCategory(p){
+    return (transportMode === 'maritime' && p.tarifLibre && p.categorieLibre.trim())
+      ? p.categorieLibre.trim()
+      : p.categorie;
   }
   function updateFees(){
     const base = computeFeeBase();
@@ -882,6 +955,16 @@
           return false;
         }
         if(transportMode === 'maritime'){
+          if(p.tarifLibre){
+            if(!p.categorieLibre.trim()){
+              showAlert("Écris la catégorie du produit, ou décoche la saisie libre pour utiliser une catégorie enregistrée.");
+              return false;
+            }
+            if(p.montantLibre<=0){
+              showAlert("Écris un montant par CBM supérieur à 0 pour la catégorie « " + p.categorieLibre.trim() + " ».");
+              return false;
+            }
+          }
           if(p.longueur<=0 || p.largeur<=0 || p.hauteur<=0){
             showAlert("Chaque produit doit avoir des dimensions (L × l × H) supérieures à 0 pour un envoi maritime.");
             return false;
@@ -941,9 +1024,20 @@
       ${val('d_email') ? 'Email : '+val('d_email')+'<br>' : ''}
       Adresse : ${val('d_adresse')}
     `;
-    document.getElementById('summaryProducts').innerHTML = products.map(p => `
-      <div class="prod-line"><span>x${p.quantite} ${p.nom}</span><span>${transportMode==='maritime' ? (p.quantite*(p.longueur*p.largeur*p.hauteur)/1e6).toFixed(3)+' m³' : (p.quantite*p.poidsUnitaire).toFixed(1)+' kg'} · ${fmtGNF(p.quantite*p.valeurUnitaire)}</span></div>
-    `).join('');
+    document.getElementById('summaryProducts').innerHTML = products.map(p => {
+      const mesure = transportMode==='maritime'
+        ? productVolume(p).toFixed(3)+' CBM'
+        : (p.quantite*p.poidsUnitaire).toFixed(1)+' kg';
+      const detailTarif = (transportMode==='maritime' && p.tarifLibre)
+        ? `<div class="prod-line" style="color:var(--slate-light); font-size:12px;">
+             <span>↳ ${p.categorieLibre.trim() || 'Catégorie libre'}</span>
+             <span>${fmtGNF(p.montantLibre)}/CBM · ${fmtGNF(productFeeMaritime(p))}</span>
+           </div>`
+        : '';
+      return `
+      <div class="prod-line"><span>x${p.quantite} ${p.nom}</span><span>${mesure} · ${fmtGNF(p.quantite*p.valeurUnitaire)}</span></div>
+      ${detailTarif}`;
+    }).join('');
     const base = computeFeeBase();
     const rabais = Number(document.getElementById('rabaisInput').value)||0;
     const extrasTotal = extraFees.reduce((s,f)=>s+(f.montant||0),0);
@@ -1017,7 +1111,16 @@
       route: { depart: departCountry, arrivee: d.name },
       expediteur: { nom: val('s_nom'), prenom: val('s_prenom'), telephone: departDialCode+val('s_tel'), email: val('s_email'), adresse: val('s_adresse') },
       destinataire: { nom: val('d_nom'), prenom: val('d_prenom'), telephone: d.dial+val('d_tel'), email: val('d_email'), adresse: val('d_adresse') },
-      produits: products.map(p => ({ nom:p.nom, quantite:p.quantite, valeurUnitaire:p.valeurUnitaire, poidsUnitaire:p.poidsUnitaire, categorie:p.categorie })),
+      produits: products.map(p => ({
+        nom:p.nom, quantite:p.quantite, valeurUnitaire:p.valeurUnitaire,
+        poidsUnitaire:p.poidsUnitaire, categorie:effectiveCategory(p),
+        longueur:p.longueur, largeur:p.largeur, hauteur:p.hauteur,
+        volume: productVolume(p),
+        fraisLigne: transportMode === 'maritime' ? productFeeMaritime(p) : (p.quantite*p.poidsUnitaire)*categoryTarif(p.categorie),
+        tarifPersonnalise: (transportMode === 'maritime' && p.tarifLibre)
+          ? { actif:true, categorie:p.categorieLibre.trim(), montant:p.montantLibre, mode:'cbm' }
+          : { actif:false }
+      })),
       poidsTotal: products.reduce((s,p)=>s+p.quantite*p.poidsUnitaire,0),
       volumeTotal: computeTotalVolume(),
       valeurTotal: products.reduce((s,p)=>s+p.quantite*p.valeurUnitaire,0),
