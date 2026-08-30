@@ -378,7 +378,7 @@
         <div class="cc-addr">${dest.adresse || 'Adresse non renseignée'}</div>
         <div class="cc-route">${route.depart || 'GUINEE'} → ${route.arrivee || '—'}</div>
         <div class="cc-meta">
-          <div><span class="m-label">Poids</span><span class="m-val">${(data.poidsTotal||0).toFixed(1)} kg</span></div>
+          <div><span class="m-label">${data.mode === 'maritime' ? 'Volume' : 'Poids'}</span><span class="m-val">${data.mode === 'maritime' ? (data.volumeTotal||0).toFixed(3) + ' CBM' : (data.poidsTotal||0).toFixed(1) + ' kg'}</span></div>
           <div><span class="m-label">Frais</span><span class="m-val">${fmtGNF(data.frais ? data.frais.total : 0)}</span></div>
           <div><span class="m-label">Date</span><span class="m-val">${fmtDate(data.dateCreation)}</span></div>
         </div>
@@ -433,9 +433,25 @@
       <div class="modal-line"><span>Adresse</span><span>${sender.adresse || 'Non renseignée'}</span></div>
     `;
     const produits = data.produits || [];
-    document.getElementById('modalProducts').innerHTML = produits.map(p => `
-      <div class="modal-line"><span>x${p.quantite} ${p.nom}</span><span>${(p.quantite*p.poidsUnitaire).toFixed(1)} kg</span></div>
-    `).join('') || '<div class="modal-line"><span>Aucun produit</span></div>';
+    const estMaritime = data.mode === 'maritime';
+    document.getElementById('modalProducts').innerHTML = produits.map(p => {
+      // Colis maritimes récents : volume enregistré par produit.
+      // Anciens colis sans dimensions : on retombe sur le volume total du colis.
+      const vol = p.volume != null
+        ? p.volume
+        : (p.longueur ? p.quantite*(p.longueur*p.largeur*p.hauteur)/1e6 : 0);
+      const mesure = estMaritime
+        ? (vol ? vol.toFixed(3) + ' CBM' : '—')
+        : (p.quantite*(p.poidsUnitaire||0)).toFixed(1) + ' kg';
+      const tp = p.tarifPersonnalise;
+      const noteTarif = (tp && tp.actif)
+        ? `<div class="modal-line" style="font-size:12px; color:var(--slate-light); border-bottom:none; padding-top:0;">
+             <span>↳ ${tp.categorie || 'Catégorie libre'}</span>
+             <span>${tp.montant ? fmtGNF(tp.montant) + '/CBM' : '—'}</span>
+           </div>`
+        : '';
+      return `<div class="modal-line"><span>x${p.quantite} ${p.nom}</span><span>${mesure}</span></div>${noteTarif}`;
+    }).join('') || '<div class="modal-line"><span>Aucun produit</span></div>';
     const frais = data.frais || {};
     document.getElementById('modalFees').innerHTML = `
       <div class="modal-line"><span>Frais de base</span><span>${fmtGNF(frais.fraisBase)}</span></div>
