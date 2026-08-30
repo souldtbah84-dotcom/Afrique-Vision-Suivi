@@ -171,6 +171,7 @@
   // Taux par défaut si aucun taux n'est défini dans Configuration > Routes & Tarifs
   let GNF_PER_USD = 9345;
   const fmtUSD = n => "≈ " + new Intl.NumberFormat('fr-FR', {maximumFractionDigits:1}).format((n||0)/GNF_PER_USD) + " USD";
+  const fmtUSDplain = n => new Intl.NumberFormat('fr-FR', {maximumFractionDigits:2}).format(n||0) + " USD";
 
   function genReference(dateCreation, numeroSuivi){
     const d = dateCreation && dateCreation.toDate ? dateCreation.toDate() : new Date();
@@ -232,6 +233,38 @@
     const reste = Math.max(0, total - paye);
     const statut = c.statut || 'en_attente';
     const reference = genReference(c.dateCreation, c.numeroSuivi);
+    const estMaritime = c.mode === 'maritime';
+    // Un reçu réimprimé doit afficher le montant facturé ce jour-là,
+    // pas un recalcul au taux du moment.
+    if(frais.tauxChangeGNFUSD) GNF_PER_USD = Number(frais.tauxChangeGNFUSD);
+
+    // Volume d'une ligne : enregistré à la création, ou recalculé depuis les
+    // dimensions pour les colis créés avant l'ajout du champ.
+    function volumeProduit(p){
+      if(p.volume != null) return p.volume;
+      if(p.longueur) return p.quantite*(p.longueur*p.largeur*p.hauteur)/1e6;
+      return 0;
+    }
+    const volumeTotal = c.volumeTotal != null
+      ? c.volumeTotal
+      : (c.produits||[]).reduce((s,p) => s + volumeProduit(p), 0);
+
+    // Colonne du milieu : CBM en maritime, poids en aérien.
+    function mesureProduit(p){
+      if(!estMaritime) return (p.quantite*(p.poidsUnitaire||0)).toFixed(1) + " kg";
+      const v = volumeProduit(p);
+      return v ? v.toFixed(3) + " CBM" : "—";
+    }
+
+    // Sous-titre du produit : catégorie et tarif au CBM quand ils sont connus.
+    function ligneCategorie(p){
+      if(!estMaritime) return '';
+      const tp = p.tarifPersonnalise;
+      const cat = (tp && tp.actif && tp.categorie) ? tp.categorie : (p.categorie || '');
+      const tarif = (tp && tp.actif && tp.montantUSD != null) ? tp.montantUSD : p.tarifCBM_USD;
+      const detail = [cat, tarif ? fmtUSDplain(tarif) + "/CBM" : ''].filter(Boolean).join(' · ');
+      return detail ? `<div style="font-size:11px; color:var(--slate-light); margin-top:2px;">${detail}</div>` : '';
+    }
 
     document.getElementById('mainContent').innerHTML = `
       <div class="receipt">
@@ -283,27 +316,30 @@
           <div class="r-section">
             <h4>Description</h4>
             <table>
-              <thead><tr><th>Produit</th><th class="num">Qté</th><th class="num">Poids</th><th class="num">Valeur</th></tr></thead>
+              <thead><tr><th>Produit</th><th class="num">Qté</th><th class="num">${estMaritime ? 'CBM' : 'Poids'}</th><th class="num">Valeur</th></tr></thead>
               <tbody>
                 ${(c.produits||[]).map(p => `<tr>
-                  <td>${p.nom}</td>
+                  <td>${p.nom}${ligneCategorie(p)}</td>
                   <td class="num">${p.quantite}</td>
-                  <td class="num">${(p.quantite*p.poidsUnitaire).toFixed(1)} kg</td>
+                  <td class="num">${mesureProduit(p)}</td>
                   <td class="num">${fmtGNF(p.quantite*p.valeurUnitaire)}</td>
                 </tr>`).join('')}
               </tbody>
             </table>
+            ${estMaritime ? `<div class="r-line" style="margin-top:6px;"><span>Volume total</span><span>${volumeTotal.toFixed(3)} CBM</span></div>` : ''}
           </div>
 
           <div class="r-section">
             <h4>Détail financier</h4>
-            <div class="r-line"><span>Frais d'expédition</span><span>${fmtGNF(frais.fraisBase)}</span></div>
+            ${estMaritime && frais.tarifCBM_USD ? `<div class="r-line"><span>Tarif maritime</span><span>${fmtUSDplain(frais.tarifCBM_USD)} / CBM</span></div>` : ''}
+            <div class="r-line"><span>Frais d'expédition${estMaritime && volumeTotal ? ' (' + volumeTotal.toFixed(3) + ' CBM)' : ''}</span><span>${fmtGNF(frais.fraisBase)}</span></div>
             ${frais.rabais>0 ? `<div class="r-line"><span>Rabais</span><span>-${fmtGNF(frais.rabais)}</span></div>` : ''}
             ${(frais.extras||[]).map(f => `<div class="r-line"><span>${f.label||'Frais'}</span><span>${fmtGNF(f.montant)}</span></div>`).join('')}
             <div class="r-total-box">
               <div class="row"><span class="lbl">Total à payer</span><span class="val">${fmtGNF(total)}</span></div>
               <div class="usd">${fmtUSD(total)}</div>
             </div>
+            ${frais.tauxChangeGNFUSD ? `<div style="font-size:11px; color:var(--slate-light); text-align:right; margin-top:6px;">Taux appliqué : 1 USD = ${new Intl.NumberFormat('fr-FR').format(frais.tauxChangeGNFUSD)} GNF</div>` : ''}
           </div>
 
           <div class="r-section">
