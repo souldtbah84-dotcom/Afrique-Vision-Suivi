@@ -85,8 +85,17 @@
 
   .loading-state, .error-state{text-align:center; padding:60px 20px; color:var(--slate);}
 
+  /* Colonne de retrait : écran seulement, jamais sur le document imprimé */
+  .col-action{width:44px; text-align:center;}
+  .retirer-btn{border:1.5px solid #f3c6c4; background:#fff; color:var(--red-flag); width:26px; height:26px;
+               border-radius:7px; cursor:pointer; font-size:13px; line-height:1; padding:0; font-family:inherit;}
+  .retirer-btn:hover{background:#fdecec;}
+  .retirer-btn:disabled{opacity:.5; cursor:default;}
+  .retrait-hint{font-size:11.5px; color:var(--slate-light); margin-top:8px; line-height:1.45;}
+
   @media print{
     header, .actions-bar{display:none !important;}
+    .col-action, .retrait-hint{display:none !important;}
     body{background:#fff;}
     main{padding:0; max-width:100%;}
     .doc{box-shadow:none; border:1px solid #ddd;}
@@ -198,6 +207,40 @@
     }
   }
 
+  // Retire un colis de ce bordereau : il redevient disponible pour un autre.
+  // Le colis lui-même n'est jamais supprimé.
+  async function retirerColis(colisId, numero, btn){
+    if(currentColisList.length <= 1){
+      alert("Impossible de retirer le dernier colis : un bordereau ne peut pas être vide.\n\nSupprime plutôt le bordereau entier.");
+      return;
+    }
+    if(!confirm("Retirer le colis " + numero + " de ce bordereau ?\n\nIl redeviendra disponible pour un autre bordereau et repassera au statut « En attente ». Le colis n'est pas supprimé.")) return;
+
+    if(btn){ btn.disabled = true; btn.textContent = "…"; }
+    try{
+      const restants = currentColisList.filter(c => c.id !== colisId).map(c => c.id);
+      // On retire d'abord du bordereau : si la seconde écriture échoue,
+      // le colis n'est plus listé mais reste retrouvable, plutôt que l'inverse.
+      await db.collection('bordereaux').doc(currentBordereauId).update({
+        colisIds: restants,
+        derniereModification: {
+          date: firebase.firestore.FieldValue.serverTimestamp(),
+          par: auth.currentUser ? auth.currentUser.email : null,
+          action: "Retrait du colis " + numero
+        }
+      });
+      await db.collection('colis').doc(colisId).update({
+        bordereauId: firebase.firestore.FieldValue.delete(),
+        statut: 'en_attente'
+      });
+      init();
+    }catch(err){
+      console.error(err);
+      alert("Impossible de retirer ce colis. Vérifie ta connexion et les règles Firestore.");
+      if(btn){ btn.disabled = false; btn.textContent = "✕"; }
+    }
+  }
+
   async function supprimerBordereau(){
     if(!confirm("Supprimer le bordereau " + (currentColisList.length ? "" : "") + "?\n\nLes " + currentColisList.length + " colis qu'il contient redeviendront disponibles (statut remis à \u00ab En attente \u00bb).")) return;
     try{
@@ -244,7 +287,7 @@
 
           <table>
             <thead>
-              <tr><th>N° Suivi</th><th>Destinataire</th><th>Destination</th><th class="num">${isMaritime?'Volume':'Poids'}</th><th>Statut</th></tr>
+              <tr><th>N° Suivi</th><th>Destinataire</th><th>Destination</th><th class="num">${isMaritime?'Volume':'Poids'}</th><th>Statut</th><th class="col-action">Retirer</th></tr>
             </thead>
             <tbody>
               ${colisList.map(c => {
@@ -255,15 +298,19 @@
                   <td><strong>${c.data.numeroSuivi||c.id}</strong></td>
                   <td>${[dest.prenom,dest.nom].filter(Boolean).join(' ')||'—'}</td>
                   <td>${route.arrivee||'—'}</td>
-                  <td class="num">${isMaritime ? (c.data.volumeTotal||0).toFixed(3)+' m³' : (c.data.poidsTotal||0).toFixed(1)+' kg'}</td>
+                  <td class="num">${isMaritime ? (c.data.volumeTotal||0).toFixed(3)+' CBM' : (c.data.poidsTotal||0).toFixed(1)+' kg'}</td>
                   <td><span class="status-pill ${statut}">${statusLabel(statut)}</span></td>
+                  <td class="col-action">
+                    <button class="retirer-btn" data-retirer="${c.id}" data-num="${c.data.numeroSuivi||c.id}" title="Retirer ce colis du bordereau">✕</button>
+                  </td>
                 </tr>`;
               }).join('')}
             </tbody>
           </table>
+          <div class="retrait-hint">Le bouton ✕ retire le colis de ce bordereau : il redevient disponible pour un autre. Cette colonne ne s'imprime pas.</div>
 
           <div class="doc-totals">
-            <div class="row grand"><span>${isMaritime?'Volume total':'Poids total'}</span><span>${isMaritime ? volumeTotal.toFixed(3)+' m³' : poidsTotal.toFixed(1)+' kg'}</span></div>
+            <div class="row grand"><span>${isMaritime?'Volume total':'Poids total'}</span><span>${isMaritime ? volumeTotal.toFixed(3)+' CBM' : poidsTotal.toFixed(1)+' kg'}</span></div>
           </div>
 
           <div class="doc-sign">
@@ -288,9 +335,13 @@
     if(document.getElementById('recuBtn')) document.getElementById('recuBtn').addEventListener('click', marquerRecu);
     document.getElementById('deleteBtn').addEventListener('click', supprimerBordereau);
 
+    document.querySelectorAll('[data-retirer]').forEach(btn => {
+      btn.addEventListener('click', () => retirerColis(btn.dataset.retirer, btn.dataset.num, btn));
+    });
+
     document.getElementById('printBtn').addEventListener('click', () => window.print());
     document.getElementById('waBtn').addEventListener('click', () => {
-      const msg = `Bordereau Africa Vision\n${b.numeroBordereau||bordereauId}\nMode : ${b.mode||''}\nRéférence : ${b.reference||''}\nDépart : ${fmtDate(b.dateDepart)}\nColis : ${colisList.length}\n${isMaritime ? 'Volume total : '+volumeTotal.toFixed(3)+' m³' : 'Poids total : '+poidsTotal.toFixed(1)+' kg'}`;
+      const msg = `Bordereau Africa Vision\n${b.numeroBordereau||bordereauId}\nMode : ${b.mode||''}\nRéférence : ${b.reference||''}\nDépart : ${fmtDate(b.dateDepart)}\nColis : ${colisList.length}\n${isMaritime ? 'Volume total : '+volumeTotal.toFixed(3)+' CBM' : 'Poids total : '+poidsTotal.toFixed(1)+' kg'}`;
       window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
     });
   }
