@@ -107,6 +107,27 @@
   .modal-head .cc-track{font-size:18px;}
   .modal-close{margin-left:auto; background:var(--cream); border:none; width:32px; height:32px; border-radius:9px; cursor:pointer; color:var(--slate); display:flex; align-items:center; justify-content:center;}
   .modal-section{margin-bottom:16px;}
+  /* --- Éditeur de colis --- */
+  .ec-note{font-size:12px; color:var(--slate); background:var(--cream); border-radius:9px; padding:9px 11px; margin-bottom:16px; line-height:1.45;}
+  .ec-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px;}
+  .ec-field{margin-bottom:10px;}
+  .ec-field label{display:block; font-size:12px; font-weight:600; color:var(--navy-800); margin-bottom:5px;}
+  .ec-shell{display:flex; align-items:center; border:1.5px solid #e3ddcd; border-radius:10px; background:#fff;}
+  .ec-shell input, .ec-shell select{width:100%; border:none; outline:none; background:transparent; padding:10px; font-size:14px; font-family:inherit; color:var(--ink);}
+  .ec-btn{width:100%; border:none; border-radius:12px; padding:13px; font-size:14.5px; font-weight:600; font-family:inherit; cursor:pointer;
+          background:linear-gradient(160deg, var(--navy-700), var(--navy-900)); color:#fff;}
+  .ec-btn:disabled{opacity:.6; cursor:default;}
+  .ec-ghost{background:none; border:none; color:var(--navy-700); font-weight:600; font-size:13px; cursor:pointer; padding:8px 0; font-family:inherit;}
+  .ec-add{background:none; border:none; color:var(--navy-700); font-weight:600; font-size:12px; cursor:pointer; float:right; font-family:inherit; text-transform:none; letter-spacing:0;}
+  .ec-total{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14.5px; color:var(--navy-900); background:var(--cream); border-radius:9px; padding:10px 12px;}
+  .ec-hint{font-size:11.5px; color:var(--slate-light); margin-top:6px; line-height:1.45;}
+  .ec-prod{border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px;}
+  .ec-prod-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .ec-prod-head .n{font-size:11px; font-weight:700; color:var(--slate-light); text-transform:uppercase; letter-spacing:.4px;}
+  .ec-del{background:none; border:none; color:var(--red-flag); cursor:pointer; padding:2px 4px; font-size:15px;}
+  .ec-extra{display:grid; grid-template-columns:1fr 120px 32px; gap:8px; align-items:center; margin-top:8px;}
+  .ec-alert{display:none; background:#fdecec; color:#a32621; border:1px solid #f3c6c4; border-radius:10px; padding:10px 12px; font-size:13px; margin:12px 0; line-height:1.45;}
+  .ec-alert.show{display:block;}
   .modal-section h4{font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--slate-light); margin:0 0 8px;}
   .modal-line{display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
   .modal-line:last-child{border-bottom:none;}
@@ -180,7 +201,8 @@
     <div class="modal-head">
       <span class="cc-track" id="modalTrack">—</span>
       <a id="modalLabelLink" href="#" style="margin-left:auto; font-size:12.5px; font-weight:600; color:var(--navy-700); white-space:nowrap;">🏷️ Étiquette</a>
-      <a id="modalReceiptLink" href="#" style="margin-left:10px; margin-right:8px; font-size:12.5px; font-weight:600; color:var(--navy-700); white-space:nowrap;">🧾 Reçu</a>
+      <a id="modalReceiptLink" href="#" style="margin-left:10px; font-size:12.5px; font-weight:600; color:var(--navy-700); white-space:nowrap;">🧾 Reçu</a>
+      <a id="modalEditLink" href="#" style="margin-left:10px; margin-right:8px; font-size:12.5px; font-weight:600; color:var(--gold); white-space:nowrap; display:none;">✏️ Modifier</a>
       <button class="modal-close" id="modalClose" aria-label="Fermer">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
@@ -223,6 +245,99 @@
     <div class="modal-section">
       <button id="modalDeleteBtn" style="width:100%; border:1.5px solid #f3c6c4; background:#fff; color:var(--red-flag); border-radius:11px; padding:12px; font-weight:600; font-size:13.5px; cursor:pointer;">🗑️ Supprimer ce colis</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL CODE DE SÉCURITÉ -->
+<div class="modal-overlay" id="codeOverlay">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-head">
+      <span class="cc-track" style="font-size:15px;">Code de modification</span>
+      <button class="modal-close" id="codeCancel" aria-label="Fermer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="ec-field">
+      <label>Saisis ton code pour modifier ce colis</label>
+      <div class="ec-shell"><input type="password" id="codePrompt" autocomplete="off" inputmode="numeric"></div>
+    </div>
+    <div class="ec-alert" id="codePromptAlert"></div>
+    <button class="ec-btn" id="codeValidate" style="margin-top:12px;">Valider</button>
+  </div>
+</div>
+
+<!-- MODAL ÉDITION DE COLIS -->
+<div class="modal-overlay" id="editOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="cc-track" id="ec_num">—</span>
+      <button class="modal-close" id="ec_close" aria-label="Fermer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="ec-note">Le numéro de suivi ne peut pas être changé : il est imprimé sur le reçu et l'étiquette du client.</div>
+
+    <div class="modal-section">
+      <h4>Acheminement</h4>
+      <div class="ec-grid">
+        <div class="ec-field"><label>Statut</label><div class="ec-shell"><select id="ec_statut">
+          <option value="en_attente">En attente</option>
+          <option value="en_transit">En transit</option>
+          <option value="livre">Livré</option>
+        </select></div></div>
+        <div class="ec-field"><label>Voie</label><div class="ec-shell"><select id="ec_mode">
+          <option value="maritime">Maritime</option>
+          <option value="aerien">Aérien</option>
+        </select></div></div>
+        <div class="ec-field"><label>Départ</label><div class="ec-shell"><input type="text" id="ec_depart"></div></div>
+        <div class="ec-field"><label>Arrivée</label><div class="ec-shell"><input type="text" id="ec_arrivee"></div></div>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <h4>Destinataire</h4>
+      <div class="ec-grid">
+        <div class="ec-field"><label>Nom</label><div class="ec-shell"><input type="text" id="ec_d_nom"></div></div>
+        <div class="ec-field"><label>Prénom</label><div class="ec-shell"><input type="text" id="ec_d_prenom"></div></div>
+        <div class="ec-field"><label>Téléphone</label><div class="ec-shell"><input type="text" id="ec_d_tel"></div></div>
+        <div class="ec-field"><label>Email</label><div class="ec-shell"><input type="text" id="ec_d_email"></div></div>
+      </div>
+      <div class="ec-field"><label>Adresse</label><div class="ec-shell"><input type="text" id="ec_d_adresse"></div></div>
+    </div>
+
+    <div class="modal-section">
+      <h4>Expéditeur</h4>
+      <div class="ec-grid">
+        <div class="ec-field"><label>Nom</label><div class="ec-shell"><input type="text" id="ec_s_nom"></div></div>
+        <div class="ec-field"><label>Prénom</label><div class="ec-shell"><input type="text" id="ec_s_prenom"></div></div>
+        <div class="ec-field"><label>Téléphone</label><div class="ec-shell"><input type="text" id="ec_s_tel"></div></div>
+        <div class="ec-field"><label>Email</label><div class="ec-shell"><input type="text" id="ec_s_email"></div></div>
+      </div>
+      <div class="ec-field"><label>Adresse</label><div class="ec-shell"><input type="text" id="ec_s_adresse"></div></div>
+    </div>
+
+    <div class="modal-section">
+      <h4>Produits <button class="ec-add" id="ec_addProd">+ Ajouter</button></h4>
+      <div id="ec_prodList"></div>
+      <div class="ec-total" id="ec_prodTotals">—</div>
+    </div>
+
+    <div class="modal-section">
+      <h4>Frais</h4>
+      <div class="ec-grid">
+        <div class="ec-field"><label>Frais de base (GNF)</label><div class="ec-shell"><input type="number" id="ec_base" min="0"></div></div>
+        <div class="ec-field"><label>Rabais (GNF)</label><div class="ec-shell"><input type="number" id="ec_rabais" min="0"></div></div>
+      </div>
+      <div id="ec_extras"></div>
+      <button class="ec-add" id="ec_addExtra" style="margin-top:8px;">+ Ajouter un frais</button>
+      <div class="ec-total" id="ec_totalLine" style="margin-top:12px;">Total : —</div>
+      <div class="ec-hint" id="ec_baseHint"></div>
+      <button class="ec-ghost" id="ec_recalc">Recalculer depuis les produits</button>
+    </div>
+
+    <div class="ec-alert" id="ec_saveAlert"></div>
+    <button class="ec-btn" id="ec_saveBtn">Enregistrer les modifications</button>
+    <button class="ec-ghost" id="ec_cancelBtn" style="width:100%; margin-top:8px;">Annuler</button>
   </div>
 </div>
 
@@ -291,6 +406,7 @@
     if(user){
       userProfile = await loadUserProfile();
       canDeleteColis = !!userProfile.canDelete;
+      await loadEditConfig();
       loadColis();
     }
     else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
@@ -409,6 +525,8 @@
     document.getElementById('modalStatusSave').disabled = !canManage;
     document.getElementById('modalStatusSave').style.opacity = canManage ? '1' : '0.5';
     document.getElementById('modalDeleteBtn').style.display = (canDeleteColis && canManage) ? '' : 'none';
+    // Modification réservée au DGA
+    document.getElementById('modalEditLink').style.display = userProfile.isDga ? '' : 'none';
     let restrictNote = document.getElementById('modalRestrictNote');
     if(!restrictNote){
       restrictNote = document.createElement('div');
@@ -447,7 +565,7 @@
       const noteTarif = (tp && tp.actif)
         ? `<div class="modal-line" style="font-size:12px; color:var(--slate-light); border-bottom:none; padding-top:0;">
              <span>↳ ${tp.categorie || 'Catégorie libre'}</span>
-             <span>${tp.montant ? fmtGNF(tp.montant) + '/CBM' : '—'}</span>
+             <span>${tp.montantUSD ? new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2}).format(tp.montantUSD) + ' USD/CBM' : (tp.montant ? fmtGNF(tp.montant) + '/CBM' : '—')}</span>
            </div>`
         : '';
       return `<div class="modal-line"><span>x${p.quantite} ${p.nom}</span><span>${mesure}</span></div>${noteTarif}`;
@@ -511,7 +629,314 @@
     }finally{
       btn.disabled = false; btn.textContent = "🗑️ Supprimer ce colis";
     }
+  });  // =====================================================================
+  // MODIFICATION D'UN COLIS — DGA seulement, après saisie du code
+  // Tout est modifiable sauf le numéro de suivi, imprimé sur le reçu
+  // et l'étiquette déjà remis au client.
+  // =====================================================================
+  const escAttr = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const ecEl = id => document.getElementById(id);
+
+  let ecDocId = null, ecData = null, ecProducts = [], ecExtras = [];
+  let ecTauxUSD = 9345, ecTarifCBM_USD = 370, ecCodeHash = null, ecCodeOk = false;
+
+  // Le code n'est jamais stocké en clair : on compare des empreintes SHA-256
+  async function hashCode(txt){
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('AV::' + txt));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  async function loadEditConfig(){
+    try{
+      const doc = await db.collection('config').doc('general').get();
+      if(doc.exists){
+        const c = doc.data();
+        if(c.tauxChangeGNFUSD) ecTauxUSD = Number(c.tauxChangeGNFUSD);
+        if(c.tarifCBM_USD) ecTarifCBM_USD = Number(c.tarifCBM_USD);
+        else if(c.tarifCBM_GNF) ecTarifCBM_USD = Number(c.tarifCBM_GNF)/ecTauxUSD;
+        ecCodeHash = c.codeModifHash || null;
+      }
+    }catch(e){ console.warn("Configuration illisible", e); }
+  }
+
+  function ecAlert(id, msg, ok){
+    const a = ecEl(id);
+    if(!msg){ a.classList.remove('show'); return; }
+    a.textContent = msg;
+    a.style.background = ok ? '#e8f6ee' : '';
+    a.style.color = ok ? '#1e7a46' : '';
+    a.style.borderColor = ok ? '#bfe3cd' : '';
+    a.classList.add('show');
+  }
+
+  // ---- Demande du code ----
+  const codeOverlay = ecEl('codeOverlay');
+  ecEl('modalEditLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    if(ecCodeOk){ openEditor(); return; }   // déjà validé pendant cette session
+    if(!ecCodeHash){
+      alert("Aucun code de modification n'est défini. Va dans Configuration › Routes & Tarifs pour en créer un.");
+      return;
+    }
+    ecEl('codePrompt').value = '';
+    ecAlert('codePromptAlert', '');
+    codeOverlay.classList.add('show');
+    setTimeout(() => ecEl('codePrompt').focus(), 100);
   });
+  ecEl('codeCancel').addEventListener('click', () => codeOverlay.classList.remove('show'));
+  codeOverlay.addEventListener('click', e => { if(e.target === codeOverlay) codeOverlay.classList.remove('show'); });
+  ecEl('codePrompt').addEventListener('keydown', e => { if(e.key === 'Enter') validateCode(); });
+  ecEl('codeValidate').addEventListener('click', validateCode);
+
+  async function validateCode(){
+    const val = ecEl('codePrompt').value.trim();
+    if(!val) return;
+    if(await hashCode(val) !== ecCodeHash){
+      ecAlert('codePromptAlert', "Code incorrect.");
+      ecEl('codePrompt').value = '';
+      return;
+    }
+    ecCodeOk = true;
+    codeOverlay.classList.remove('show');
+    openEditor();
+  }
+
+  // ---- Ouverture de l'éditeur ----
+  const editOverlay = ecEl('editOverlay');
+  function openEditor(){
+    const target = allDocs.find(d => d.id === currentDetailId);
+    if(!target) return;
+    ecDocId = target.id;
+    ecData = target.data;
+    fillEditor();
+    modalOverlay.classList.remove('show');
+    editOverlay.classList.add('show');
+  }
+  ecEl('ec_close').addEventListener('click', () => editOverlay.classList.remove('show'));
+  ecEl('ec_cancelBtn').addEventListener('click', () => editOverlay.classList.remove('show'));
+
+  function fillEditor(){
+    const c = ecData;
+    ecEl('ec_num').textContent = c.numeroSuivi || '—';
+    ecEl('ec_statut').value = c.statut || 'en_attente';
+    ecEl('ec_mode').value = c.mode === 'aerien' ? 'aerien' : 'maritime';
+    ecEl('ec_depart').value  = (c.route && c.route.depart)  || '';
+    ecEl('ec_arrivee').value = (c.route && c.route.arrivee) || '';
+
+    const s = c.expediteur || {}, d = c.destinataire || {};
+    const map = {nom:'nom', prenom:'prenom', telephone:'tel', email:'email', adresse:'adresse'};
+    Object.keys(map).forEach(k => {
+      ecEl('ec_s_' + map[k]).value = s[k] || '';
+      ecEl('ec_d_' + map[k]).value = d[k] || '';
+    });
+
+    ecProducts = (c.produits || []).map(p => ({
+      nom:p.nom||'', quantite:Number(p.quantite)||0,
+      valeurUnitaire:Number(p.valeurUnitaire)||0, poidsUnitaire:Number(p.poidsUnitaire)||0,
+      longueur:Number(p.longueur)||0, largeur:Number(p.largeur)||0, hauteur:Number(p.hauteur)||0,
+      categorie:(p.tarifPersonnalise && p.tarifPersonnalise.actif && p.tarifPersonnalise.categorie) || p.categorie || '',
+      tarifCBM_USD: p.tarifCBM_USD != null ? Number(p.tarifCBM_USD)
+                  : (p.tarifPersonnalise && p.tarifPersonnalise.montantUSD) || null,
+      tarifPersonnalise: p.tarifPersonnalise || {actif:false}
+    }));
+    const f = c.frais || {};
+    ecExtras = (f.extras || []).map(x => ({label:x.label||'', montant:Number(x.montant)||0}));
+    ecEl('ec_base').value = Number(f.fraisBase)||0;
+    ecEl('ec_rabais').value = Number(f.rabais)||0;
+
+    renderEcProducts();
+    renderEcExtras();
+    ecAlert('ec_saveAlert', '');
+  }
+
+  function ecVolume(p){ return p.quantite*((p.longueur*p.largeur*p.hauteur)/1e6); }
+
+  function renderEcProducts(){
+    const wrap = ecEl('ec_prodList');
+    const maritime = ecEl('ec_mode').value === 'maritime';
+    wrap.innerHTML = '';
+    ecProducts.forEach((p, i) => {
+      const box = document.createElement('div');
+      box.className = 'ec-prod';
+      box.innerHTML = `
+        <div class="ec-prod-head">
+          <span class="n">Produit ${i+1}</span>
+          <button class="ec-del" data-del="${i}" title="Supprimer">🗑️</button>
+        </div>
+        <div class="ec-field"><label>Désignation</label><div class="ec-shell"><input type="text" class="ep-nom" value="${escAttr(p.nom)}"></div></div>
+        <div class="ec-grid">
+          <div class="ec-field"><label>Quantité</label><div class="ec-shell"><input type="number" class="ep-qte" min="0" value="${p.quantite}"></div></div>
+          <div class="ec-field"><label>Valeur unitaire (GNF)</label><div class="ec-shell"><input type="number" class="ep-val" min="0" value="${p.valeurUnitaire}"></div></div>
+        </div>
+        ${maritime ? `
+          <div class="ec-grid">
+            <div class="ec-field"><label>Longueur (cm)</label><div class="ec-shell"><input type="number" class="ep-long" min="0" value="${p.longueur}"></div></div>
+            <div class="ec-field"><label>Largeur (cm)</label><div class="ec-shell"><input type="number" class="ep-larg" min="0" value="${p.largeur}"></div></div>
+            <div class="ec-field"><label>Hauteur (cm)</label><div class="ec-shell"><input type="number" class="ep-haut" min="0" value="${p.hauteur}"></div></div>
+            <div class="ec-field"><label>Tarif (USD / CBM)</label><div class="ec-shell"><input type="number" step="0.01" class="ep-tarif" min="0" value="${p.tarifCBM_USD != null ? p.tarifCBM_USD : ecTarifCBM_USD}"></div></div>
+          </div>
+        ` : `
+          <div class="ec-field"><label>Poids unitaire (kg)</label><div class="ec-shell"><input type="number" step="0.1" class="ep-poids" min="0" value="${p.poidsUnitaire}"></div></div>
+        `}
+        <div class="ec-field"><label>Catégorie</label><div class="ec-shell"><input type="text" class="ep-cat" value="${escAttr(p.categorie)}"></div></div>
+        <div class="ec-hint ep-sub"></div>`;
+
+      const q = sel => box.querySelector(sel);
+      function sync(){
+        p.nom = q('.ep-nom').value;
+        p.quantite = Number(q('.ep-qte').value)||0;
+        p.valeurUnitaire = Number(q('.ep-val').value)||0;
+        p.categorie = q('.ep-cat').value;
+        if(maritime){
+          p.longueur = Number(q('.ep-long').value)||0;
+          p.largeur  = Number(q('.ep-larg').value)||0;
+          p.hauteur  = Number(q('.ep-haut').value)||0;
+          p.tarifCBM_USD = Number(q('.ep-tarif').value)||0;
+          const vol = ecVolume(p);
+          q('.ep-sub').textContent = vol.toFixed(3) + " CBM · " + fmtGNF(vol*p.tarifCBM_USD*ecTauxUSD);
+        }else{
+          p.poidsUnitaire = Number(q('.ep-poids').value)||0;
+          q('.ep-sub').textContent = (p.quantite*p.poidsUnitaire).toFixed(1) + " kg";
+        }
+        updateEcTotals();
+      }
+      box.querySelectorAll('input').forEach(el => el.addEventListener('input', sync));
+      q('[data-del]').addEventListener('click', () => { ecProducts.splice(i,1); renderEcProducts(); });
+      wrap.appendChild(box);
+      sync();
+    });
+    if(!ecProducts.length) wrap.innerHTML = '<div class="ec-hint">Aucun produit.</div>';
+    updateEcTotals();
+  }
+
+  ecEl('ec_addProd').addEventListener('click', () => {
+    ecProducts.push({nom:'', quantite:1, valeurUnitaire:0, poidsUnitaire:0,
+      longueur:0, largeur:0, hauteur:0, categorie:'', tarifCBM_USD:ecTarifCBM_USD, tarifPersonnalise:{actif:false}});
+    renderEcProducts();
+  });
+  ecEl('ec_mode').addEventListener('change', renderEcProducts);
+
+  function renderEcExtras(){
+    const wrap = ecEl('ec_extras');
+    wrap.innerHTML = '';
+    ecExtras.forEach((x, i) => {
+      const row = document.createElement('div');
+      row.className = 'ec-extra';
+      row.innerHTML = `
+        <div class="ec-shell"><input type="text" class="ex-label" placeholder="Intitulé" value="${escAttr(x.label)}"></div>
+        <div class="ec-shell"><input type="number" class="ex-montant" min="0" value="${x.montant}"></div>
+        <button class="ec-del" data-delx="${i}" title="Supprimer">🗑️</button>`;
+      row.querySelector('.ex-label').addEventListener('input', e => { x.label = e.target.value; });
+      row.querySelector('.ex-montant').addEventListener('input', e => { x.montant = Number(e.target.value)||0; updateEcTotals(); });
+      row.querySelector('[data-delx]').addEventListener('click', () => { ecExtras.splice(i,1); renderEcExtras(); updateEcTotals(); });
+      wrap.appendChild(row);
+    });
+  }
+  ecEl('ec_addExtra').addEventListener('click', () => { ecExtras.push({label:'', montant:0}); renderEcExtras(); });
+
+  // En aérien le tarif dépend des catégories : pas de recalcul automatique
+  function ecComputeBase(){
+    if(ecEl('ec_mode').value !== 'maritime') return null;
+    return ecProducts.reduce((s,p) => s + ecVolume(p)*(p.tarifCBM_USD||0)*ecTauxUSD, 0);
+  }
+
+  function updateEcTotals(){
+    const maritime = ecEl('ec_mode').value === 'maritime';
+    const vol = ecProducts.reduce((s,p) => s + ecVolume(p), 0);
+    const poids = ecProducts.reduce((s,p) => s + p.quantite*p.poidsUnitaire, 0);
+    const valeur = ecProducts.reduce((s,p) => s + p.quantite*p.valeurUnitaire, 0);
+    ecEl('ec_prodTotals').textContent = (maritime ? vol.toFixed(3)+" CBM" : poids.toFixed(1)+" kg") + " · " + fmtGNF(valeur);
+
+    const base = Number(ecEl('ec_base').value)||0;
+    const rabais = Number(ecEl('ec_rabais').value)||0;
+    const extras = ecExtras.reduce((s,x) => s + x.montant, 0);
+    ecEl('ec_totalLine').textContent = "Total : " + fmtGNF(base - rabais + extras);
+
+    const calc = ecComputeBase();
+    ecEl('ec_baseHint').textContent = calc == null
+      ? "Voie aérienne : les frais dépendent des catégories, saisis-les à la main."
+      : "Calcul depuis les produits : " + fmtGNF(calc)
+        + (Math.abs(calc - base) > 1 ? " — différent des frais saisis." : " — conforme aux frais saisis.");
+  }
+  ['ec_base','ec_rabais'].forEach(id => ecEl(id).addEventListener('input', updateEcTotals));
+
+  ecEl('ec_recalc').addEventListener('click', () => {
+    const calc = ecComputeBase();
+    if(calc == null){ ecAlert('ec_saveAlert', "Recalcul possible seulement en maritime."); return; }
+    ecEl('ec_base').value = Math.round(calc);
+    updateEcTotals();
+  });
+
+  ecEl('ec_saveBtn').addEventListener('click', async () => {
+    if(!ecDocId) return;
+    ecAlert('ec_saveAlert', '');
+    if(!ecProducts.length){ ecAlert('ec_saveAlert', "Il faut au moins un produit."); return; }
+    if(ecProducts.some(p => !p.nom.trim())){ ecAlert('ec_saveAlert', "Chaque produit doit avoir une désignation."); return; }
+
+    const maritime = ecEl('ec_mode').value === 'maritime';
+    const base = Number(ecEl('ec_base').value)||0;
+    const rabais = Number(ecEl('ec_rabais').value)||0;
+    const extras = ecExtras.filter(x => x.label.trim() || x.montant);
+    const total = base - rabais + extras.reduce((s,x)=>s+x.montant,0);
+
+    const btn = ecEl('ec_saveBtn'), txt = btn.textContent;
+    btn.disabled = true; btn.textContent = "Enregistrement...";
+    try{
+      await db.collection('colis').doc(ecDocId).update({
+        // numeroSuivi volontairement absent : il ne doit jamais changer
+        statut: ecEl('ec_statut').value,
+        mode: maritime ? 'maritime' : 'aerien',
+        route: { depart: ecEl('ec_depart').value.trim(), arrivee: ecEl('ec_arrivee').value.trim() },
+        expediteur: {
+          nom: ecEl('ec_s_nom').value.trim(), prenom: ecEl('ec_s_prenom').value.trim(),
+          telephone: ecEl('ec_s_tel').value.trim(), email: ecEl('ec_s_email').value.trim(),
+          adresse: ecEl('ec_s_adresse').value.trim()
+        },
+        destinataire: {
+          nom: ecEl('ec_d_nom').value.trim(), prenom: ecEl('ec_d_prenom').value.trim(),
+          telephone: ecEl('ec_d_tel').value.trim(), email: ecEl('ec_d_email').value.trim(),
+          adresse: ecEl('ec_d_adresse').value.trim()
+        },
+        produits: ecProducts.map(p => {
+          const vol = ecVolume(p);
+          const perso = p.tarifPersonnalise && p.tarifPersonnalise.actif;
+          return {
+            nom:p.nom.trim(), quantite:p.quantite, valeurUnitaire:p.valeurUnitaire,
+            poidsUnitaire:p.poidsUnitaire, categorie:p.categorie.trim(),
+            longueur:p.longueur, largeur:p.largeur, hauteur:p.hauteur,
+            volume: vol,
+            tarifCBM_USD: maritime ? (p.tarifCBM_USD||0) : null,
+            fraisLigneUSD: maritime ? vol*(p.tarifCBM_USD||0) : null,
+            fraisLigne: maritime ? vol*(p.tarifCBM_USD||0)*ecTauxUSD : null,
+            tarifPersonnalise: (maritime && perso)
+              ? { actif:true, categorie:p.categorie.trim(), montantUSD:p.tarifCBM_USD||0, mode:'cbm_usd' }
+              : { actif:false }
+          };
+        }),
+        poidsTotal: ecProducts.reduce((s,p)=>s+p.quantite*p.poidsUnitaire,0),
+        volumeTotal: ecProducts.reduce((s,p)=>s+ecVolume(p),0),
+        valeurTotal: ecProducts.reduce((s,p)=>s+p.quantite*p.valeurUnitaire,0),
+        'frais.fraisBase': base,
+        'frais.rabais': rabais,
+        'frais.extras': extras.map(x => ({label:x.label.trim(), montant:x.montant})),
+        'frais.total': total,
+        // Trace de la correction : qui, quand, et le total d'avant
+        modification: {
+          date: firebase.firestore.FieldValue.serverTimestamp(),
+          par: auth.currentUser ? auth.currentUser.email : null,
+          ancienTotal: (ecData.frais && ecData.frais.total) || 0
+        }
+      });
+      ecAlert('ec_saveAlert', "Colis " + (ecData.numeroSuivi||'') + " mis à jour. Pense à renvoyer le reçu au client si les frais ont changé.", true);
+      loadColis();
+    }catch(e){
+      console.error(e);
+      ecAlert('ec_saveAlert', "Enregistrement impossible. Vérifie ta connexion et réessaie.");
+    }finally{
+      btn.disabled = false; btn.textContent = txt;
+    }
+  });
+
 </script>
 
 </body>
