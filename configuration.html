@@ -55,6 +55,12 @@
   .info-banner svg{flex:none; margin-top:1px;}
 
   .card{background:var(--paper); border:1px solid var(--line); border-radius:13px; padding:16px; margin-bottom:16px;}
+  .ec-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px;}
+  .ec-total{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; color:var(--navy-900);}
+  .ec-prod{background:var(--paper); border:1px solid var(--line); border-radius:13px; padding:14px; margin-bottom:10px;}
+  .ec-prod-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .ec-prod-head .n{font-size:12px; font-weight:700; color:var(--slate); text-transform:uppercase; letter-spacing:.4px;}
+  .ec-extra{display:grid; grid-template-columns:1fr 130px 36px; gap:8px; align-items:center; margin-top:8px;}
   .rate-row{display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;}
   .rate-label{font-size:12.5px; color:var(--slate); font-weight:600;}
   .rate-value{font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700;}
@@ -132,6 +138,7 @@
     <div class="tab active" data-tab="categories">Catégories</div>
     <div class="tab" data-tab="routes">Routes & Tarifs</div>
     <div class="tab" data-tab="users">Utilisateurs</div>
+    <div class="tab" data-tab="colis" id="tabColis">Colis</div>
   </div>
 </header>
 
@@ -165,14 +172,14 @@
 
     <div class="card" style="margin-top:12px;">
       <div class="rate-row">
-        <div><div class="rate-label">Tarif maritime</div><div class="rate-value" id="cbmDisplay">— GNF / m³</div></div>
+        <div><div class="rate-label">Tarif maritime</div><div class="rate-value" id="cbmDisplay">— USD / CBM</div></div>
         <button class="rate-toggle" id="cbmToggle">Modifier</button>
       </div>
       <div class="rate-edit" id="cbmEdit">
-        <input type="number" id="cbmInput" placeholder="Ex : 700000">
+        <input type="number" id="cbmInput" step="0.01" placeholder="Ex : 370">
         <button id="cbmSave">Enregistrer</button>
       </div>
-      <div style="font-size:11.5px; color:var(--slate-light); margin-top:8px;">Utilisé par "Nouveau Colis" pour calculer les frais des envois maritimes, sur la base du volume (L × l × H) plutôt que du poids.</div>
+      <div style="font-size:11.5px; color:var(--slate-light); margin-top:8px;">Montant en dollars par CBM, converti en francs au taux ci-dessus. Utilisé par "Nouveau Colis" pour les envois maritimes, sur la base du volume (L × l × H) plutôt que du poids.</div>
     </div>
 
     <div class="section-head">
@@ -197,6 +204,102 @@
       <span>Créer un utilisateur ici crée directement son compte de connexion (email + mot de passe).</span>
     </div>
     <div class="item-list" id="userList"></div>
+  </section>
+  <!-- ============ ONGLET COLIS (DGA uniquement) ============ -->
+  <section class="panel" id="panel-colis">
+    <div class="section-head">
+      <h2>Modifier un colis enregistré</h2>
+    </div>
+    <div class="info-banner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg>
+      <span>Réservé au DGA. Le numéro de suivi ne peut pas être changé : il est imprimé sur le reçu et sur l'étiquette du client.</span>
+    </div>
+
+    <div class="card">
+      <div class="field">
+        <label>Numéro de suivi</label>
+        <div class="input-shell"><input type="text" id="ec_search" placeholder="Ex : AV867181" autocomplete="off"></div>
+      </div>
+      <button class="btn" id="ec_searchBtn" style="margin-top:10px;">Rechercher</button>
+      <div class="alert" id="ec_searchAlert" style="margin-top:10px;"></div>
+    </div>
+
+    <div id="ec_editor" style="display:none;">
+      <div class="card" style="margin-top:12px;">
+        <div class="rate-row">
+          <div>
+            <div class="rate-label">Colis</div>
+            <div class="rate-value" id="ec_num">—</div>
+            <div style="font-size:11.5px; color:var(--slate-light); margin-top:4px;" id="ec_meta"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px;">
+        <div class="rate-label" style="margin-bottom:10px;">Acheminement</div>
+        <div class="ec-grid">
+          <div class="field"><label>Statut</label><div class="input-shell"><select id="ec_statut">
+            <option value="en_attente">En attente</option>
+            <option value="en_transit">En transit</option>
+            <option value="livre">Livré</option>
+          </select></div></div>
+          <div class="field"><label>Voie</label><div class="input-shell"><select id="ec_mode">
+            <option value="maritime">Maritime</option>
+            <option value="aerien">Aérien</option>
+          </select></div></div>
+          <div class="field"><label>Départ</label><div class="input-shell"><input type="text" id="ec_depart"></div></div>
+          <div class="field"><label>Arrivée</label><div class="input-shell"><input type="text" id="ec_arrivee"></div></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px;">
+        <div class="rate-label" style="margin-bottom:10px;">Expéditeur</div>
+        <div class="ec-grid">
+          <div class="field"><label>Nom</label><div class="input-shell"><input type="text" id="ec_s_nom"></div></div>
+          <div class="field"><label>Prénom</label><div class="input-shell"><input type="text" id="ec_s_prenom"></div></div>
+          <div class="field"><label>Téléphone</label><div class="input-shell"><input type="text" id="ec_s_tel"></div></div>
+          <div class="field"><label>Email</label><div class="input-shell"><input type="text" id="ec_s_email"></div></div>
+        </div>
+        <div class="field"><label>Adresse</label><div class="input-shell"><input type="text" id="ec_s_adresse"></div></div>
+      </div>
+
+      <div class="card" style="margin-top:12px;">
+        <div class="rate-label" style="margin-bottom:10px;">Destinataire</div>
+        <div class="ec-grid">
+          <div class="field"><label>Nom</label><div class="input-shell"><input type="text" id="ec_d_nom"></div></div>
+          <div class="field"><label>Prénom</label><div class="input-shell"><input type="text" id="ec_d_prenom"></div></div>
+          <div class="field"><label>Téléphone</label><div class="input-shell"><input type="text" id="ec_d_tel"></div></div>
+          <div class="field"><label>Email</label><div class="input-shell"><input type="text" id="ec_d_email"></div></div>
+        </div>
+        <div class="field"><label>Adresse</label><div class="input-shell"><input type="text" id="ec_d_adresse"></div></div>
+      </div>
+
+      <div class="section-head" style="margin-top:20px;">
+        <h2>Produits</h2>
+        <button class="add-btn" id="ec_addProd"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg> Ajouter</button>
+      </div>
+      <div id="ec_prodList"></div>
+      <div class="card" style="margin-top:10px;">
+        <div class="ec-total" id="ec_prodTotals">—</div>
+      </div>
+
+      <div class="section-head" style="margin-top:20px;"><h2>Frais</h2></div>
+      <div class="card">
+        <div class="ec-grid">
+          <div class="field"><label>Frais de base (GNF)</label><div class="input-shell"><input type="number" id="ec_base" min="0"></div></div>
+          <div class="field"><label>Rabais (GNF)</label><div class="input-shell"><input type="number" id="ec_rabais" min="0"></div></div>
+        </div>
+        <div id="ec_extras"></div>
+        <button class="add-btn" id="ec_addExtra" style="margin-top:8px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg> Ajouter un frais</button>
+        <div class="ec-total" id="ec_totalLine" style="margin-top:12px;">Total : —</div>
+        <div style="font-size:11.5px; color:var(--slate-light); margin-top:6px;" id="ec_baseHint"></div>
+        <button class="rate-toggle" id="ec_recalc" style="margin-top:10px;">Recalculer depuis les produits</button>
+      </div>
+
+      <div class="alert" id="ec_saveAlert" style="margin-top:14px;"></div>
+      <button class="btn" id="ec_saveBtn" style="margin-top:6px;">Enregistrer les modifications</button>
+      <button class="rate-toggle" id="ec_cancelBtn" style="margin-top:10px; width:100%;">Annuler</button>
+    </div>
   </section>
 
 </main>
@@ -323,6 +426,8 @@
   const db = firebase.firestore();
 
   const fmtGNF = n => new Intl.NumberFormat('fr-FR').format(Math.round(n||0)) + " GNF";
+  // Un guillemet dans un nom saisi casserait l'attribut value=""
+  const escAttr = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   async function checkModuleAccess(moduleKey){
     try{
@@ -348,6 +453,7 @@
         return;
       }
       loadCategories(); loadDestinations(); loadRate(); loadCbmRate(); loadUsers();
+      initColisTab();
     }
     else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
     else { loadCategories(); loadDestinations(); loadRate(); loadCbmRate(); loadUsers(); }
@@ -457,9 +563,14 @@
 
   function loadCbmRate(){
     db.collection('config').doc('general').get().then(doc => {
-      const rate = doc.exists && doc.data().tarifCBM_GNF ? doc.data().tarifCBM_GNF : 700000;
-      document.getElementById('cbmDisplay').textContent = fmtGNF(rate) + " / m³";
-      document.getElementById('cbmInput').value = rate;
+      const c = doc.exists ? doc.data() : {};
+      const taux = c.tauxChangeGNFUSD || 9345;
+      // Ancien réglage en francs : on le ramène en dollars pour l'affichage
+      const usd = c.tarifCBM_USD ? Number(c.tarifCBM_USD)
+                : (c.tarifCBM_GNF ? Number(c.tarifCBM_GNF)/taux : 370);
+      document.getElementById('cbmDisplay').textContent =
+        new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2}).format(usd) + " USD / CBM · " + fmtGNF(usd*taux);
+      document.getElementById('cbmInput').value = Math.round(usd*100)/100;
     });
   }
   document.getElementById('cbmToggle').addEventListener('click', () => {
@@ -468,7 +579,11 @@
   document.getElementById('cbmSave').addEventListener('click', async () => {
     const val = Number(document.getElementById('cbmInput').value);
     if(!val || val <= 0) return;
-    await db.collection('config').doc('general').set({tarifCBM_GNF: val}, {merge:true});
+    // tarifCBM_GNF est supprimé pour qu'il ne reste qu'un seul tarif de référence
+    await db.collection('config').doc('general').set({
+      tarifCBM_USD: val,
+      tarifCBM_GNF: firebase.firestore.FieldValue.delete()
+    }, {merge:true});
     document.getElementById('cbmEdit').classList.remove('show');
     loadCbmRate();
   });
@@ -729,7 +844,299 @@
       console.error(err);
       alert("Impossible de supprimer. Vérifie les règles Firestore.");
     });
+  }  // =====================================================================
+  // MODIFICATION D'UN COLIS ENREGISTRÉ — réservé au DGA
+  // Tout est modifiable sauf le numéro de suivi, qui figure sur le reçu
+  // et l'étiquette déjà remis au client.
+  // =====================================================================
+  let ecDocId = null, ecData = null, ecProducts = [], ecExtras = [];
+  let ecTauxUSD = 9345, ecTarifCBM_USD = 370;
+
+  const ecEl = id => document.getElementById(id);
+  function ecAlert(id, msg, ok){
+    const a = ecEl(id);
+    if(!msg){ a.classList.remove('show'); return; }
+    a.textContent = msg;
+    a.style.background = ok ? '#e8f6ee' : '';
+    a.style.color = ok ? '#1e7a46' : '';
+    a.classList.add('show');
   }
+
+  // Le DGA seul voit l'onglet
+  async function initColisTab(){
+    try{
+      const snap = await db.collection('utilisateurs').where('email','==',auth.currentUser.email).limit(1).get();
+      const estDGA = snap.empty || snap.docs[0].data().role === 'dga';
+      if(!estDGA){ ecEl('tabColis').style.display = 'none'; return; }
+    }catch(e){
+      // En cas d'échec de lecture, on masque : mieux vaut cacher que d'ouvrir à tort
+      ecEl('tabColis').style.display = 'none';
+      return;
+    }
+    const doc = await db.collection('config').doc('general').get().catch(() => null);
+    if(doc && doc.exists){
+      const c = doc.data();
+      if(c.tauxChangeGNFUSD) ecTauxUSD = Number(c.tauxChangeGNFUSD);
+      if(c.tarifCBM_USD) ecTarifCBM_USD = Number(c.tarifCBM_USD);
+      else if(c.tarifCBM_GNF) ecTarifCBM_USD = Number(c.tarifCBM_GNF)/ecTauxUSD;
+    }
+  }
+
+  ecEl('ec_searchBtn').addEventListener('click', searchColis);
+  ecEl('ec_search').addEventListener('keydown', e => { if(e.key === 'Enter') searchColis(); });
+
+  async function searchColis(){
+    const num = ecEl('ec_search').value.trim().toUpperCase();
+    ecAlert('ec_searchAlert', '');
+    if(!num){ ecAlert('ec_searchAlert', "Saisis un numéro de suivi."); return; }
+    try{
+      const snap = await db.collection('colis').where('numeroSuivi','==',num).limit(1).get();
+      if(snap.empty){ ecEl('ec_editor').style.display = 'none'; ecAlert('ec_searchAlert', "Aucun colis avec ce numéro."); return; }
+      ecDocId = snap.docs[0].id;
+      ecData = snap.docs[0].data();
+      fillEditor();
+    }catch(e){
+      console.error(e);
+      ecAlert('ec_searchAlert', "Recherche impossible. Vérifie ta connexion.");
+    }
+  }
+
+  function fillEditor(){
+    const c = ecData;
+    ecEl('ec_num').textContent = c.numeroSuivi || '—';
+    const d = c.dateCreation && c.dateCreation.toDate ? c.dateCreation.toDate() : null;
+    ecEl('ec_meta').textContent = d ? "Créé le " + d.toLocaleDateString('fr-FR') : "";
+
+    ecEl('ec_statut').value = c.statut || 'en_attente';
+    ecEl('ec_mode').value = c.mode || 'maritime';
+    ecEl('ec_depart').value  = (c.route && c.route.depart)  || '';
+    ecEl('ec_arrivee').value = (c.route && c.route.arrivee) || '';
+
+    const s = c.expediteur || {}, dst = c.destinataire || {};
+    ['nom','prenom','telephone','email','adresse'].forEach(k => {
+      const map = {nom:'nom', prenom:'prenom', telephone:'tel', email:'email', adresse:'adresse'};
+      ecEl('ec_s_' + map[k]).value = s[k] || '';
+      ecEl('ec_d_' + map[k]).value = dst[k] || '';
+    });
+
+    ecProducts = (c.produits || []).map(p => ({
+      nom:p.nom||'', quantite:Number(p.quantite)||0,
+      valeurUnitaire:Number(p.valeurUnitaire)||0, poidsUnitaire:Number(p.poidsUnitaire)||0,
+      longueur:Number(p.longueur)||0, largeur:Number(p.largeur)||0, hauteur:Number(p.hauteur)||0,
+      categorie:p.categorie||'',
+      tarifCBM_USD: p.tarifCBM_USD != null ? Number(p.tarifCBM_USD) : null,
+      tarifPersonnalise: p.tarifPersonnalise || {actif:false}
+    }));
+    const f = c.frais || {};
+    ecExtras = (f.extras || []).map(x => ({label:x.label||'', montant:Number(x.montant)||0}));
+    ecEl('ec_base').value = Number(f.fraisBase)||0;
+    ecEl('ec_rabais').value = Number(f.rabais)||0;
+
+    renderEcProducts();
+    renderEcExtras();
+    ecEl('ec_editor').style.display = 'block';
+    ecAlert('ec_saveAlert', '');
+  }
+
+  function ecVolume(p){ return p.quantite*((p.longueur*p.largeur*p.hauteur)/1e6); }
+
+  function renderEcProducts(){
+    const wrap = ecEl('ec_prodList');
+    const maritime = ecEl('ec_mode').value === 'maritime';
+    wrap.innerHTML = '';
+    ecProducts.forEach((p, i) => {
+      const box = document.createElement('div');
+      box.className = 'ec-prod';
+      box.innerHTML = `
+        <div class="ec-prod-head">
+          <span class="n">Produit ${i+1}</span>
+          <button class="icon-sm danger" data-del="${i}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+        <div class="field"><label>Désignation</label><div class="input-shell"><input type="text" class="ep-nom" value="${escAttr(p.nom)}"></div></div>
+        <div class="ec-grid">
+          <div class="field"><label>Quantité</label><div class="input-shell"><input type="number" class="ep-qte" min="0" value="${p.quantite}"></div></div>
+          <div class="field"><label>Valeur unitaire (GNF)</label><div class="input-shell"><input type="number" class="ep-val" min="0" value="${p.valeurUnitaire}"></div></div>
+        </div>
+        ${maritime ? `
+          <div class="ec-grid">
+            <div class="field"><label>Longueur (cm)</label><div class="input-shell"><input type="number" class="ep-long" min="0" value="${p.longueur}"></div></div>
+            <div class="field"><label>Largeur (cm)</label><div class="input-shell"><input type="number" class="ep-larg" min="0" value="${p.largeur}"></div></div>
+            <div class="field"><label>Hauteur (cm)</label><div class="input-shell"><input type="number" class="ep-haut" min="0" value="${p.hauteur}"></div></div>
+            <div class="field"><label>Tarif (USD / CBM)</label><div class="input-shell"><input type="number" step="0.01" class="ep-tarif" min="0" value="${p.tarifCBM_USD != null ? p.tarifCBM_USD : ecTarifCBM_USD}"></div></div>
+          </div>
+          <div class="field"><label>Catégorie</label><div class="input-shell"><input type="text" class="ep-cat" value="${escAttr(p.tarifPersonnalise && p.tarifPersonnalise.actif ? (p.tarifPersonnalise.categorie||p.categorie) : p.categorie)}"></div></div>
+        ` : `
+          <div class="ec-grid">
+            <div class="field"><label>Poids unitaire (kg)</label><div class="input-shell"><input type="number" step="0.1" class="ep-poids" min="0" value="${p.poidsUnitaire}"></div></div>
+            <div class="field"><label>Catégorie</label><div class="input-shell"><input type="text" class="ep-cat" value="${escAttr(p.categorie)}"></div></div>
+          </div>
+        `}
+        <div style="font-size:11.5px; color:var(--slate-light); margin-top:8px;" class="ep-sub"></div>`;
+
+      const q = (sel) => box.querySelector(sel);
+      function sync(){
+        p.nom = q('.ep-nom').value;
+        p.quantite = Number(q('.ep-qte').value)||0;
+        p.valeurUnitaire = Number(q('.ep-val').value)||0;
+        if(q('.ep-cat')) p.categorie = q('.ep-cat').value;
+        if(maritime){
+          p.longueur = Number(q('.ep-long').value)||0;
+          p.largeur  = Number(q('.ep-larg').value)||0;
+          p.hauteur  = Number(q('.ep-haut').value)||0;
+          p.tarifCBM_USD = Number(q('.ep-tarif').value)||0;
+          const vol = ecVolume(p);
+          q('.ep-sub').textContent = vol.toFixed(3) + " CBM · " + fmtGNF(vol*p.tarifCBM_USD*ecTauxUSD);
+        }else{
+          p.poidsUnitaire = Number(q('.ep-poids').value)||0;
+          q('.ep-sub').textContent = (p.quantite*p.poidsUnitaire).toFixed(1) + " kg";
+        }
+        updateEcTotals();
+      }
+      box.querySelectorAll('input').forEach(el => el.addEventListener('input', sync));
+      q('[data-del]').addEventListener('click', () => {
+        ecProducts.splice(i,1); renderEcProducts(); updateEcTotals();
+      });
+      wrap.appendChild(box);
+      sync();
+    });
+    if(!ecProducts.length) wrap.innerHTML = '<div class="empty-state">Aucun produit.</div>';
+    updateEcTotals();
+  }
+
+  ecEl('ec_addProd').addEventListener('click', () => {
+    ecProducts.push({nom:'', quantite:1, valeurUnitaire:0, poidsUnitaire:0,
+      longueur:0, largeur:0, hauteur:0, categorie:'', tarifCBM_USD:ecTarifCBM_USD, tarifPersonnalise:{actif:false}});
+    renderEcProducts();
+  });
+
+  ecEl('ec_mode').addEventListener('change', () => { renderEcProducts(); });
+
+  function renderEcExtras(){
+    const wrap = ecEl('ec_extras');
+    wrap.innerHTML = '';
+    ecExtras.forEach((x, i) => {
+      const row = document.createElement('div');
+      row.className = 'ec-extra';
+      row.innerHTML = `
+        <div class="input-shell"><input type="text" class="ex-label" placeholder="Intitulé" value="${escAttr(x.label)}"></div>
+        <div class="input-shell"><input type="number" class="ex-montant" min="0" value="${x.montant}"></div>
+        <button class="icon-sm danger" data-delx="${i}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+      row.querySelector('.ex-label').addEventListener('input', e => { x.label = e.target.value; });
+      row.querySelector('.ex-montant').addEventListener('input', e => { x.montant = Number(e.target.value)||0; updateEcTotals(); });
+      row.querySelector('[data-delx]').addEventListener('click', () => { ecExtras.splice(i,1); renderEcExtras(); updateEcTotals(); });
+      wrap.appendChild(row);
+    });
+  }
+  ecEl('ec_addExtra').addEventListener('click', () => { ecExtras.push({label:'', montant:0}); renderEcExtras(); });
+
+  // Frais recalculés à partir des produits, comme dans "Nouveau Colis"
+  function ecComputeBase(){
+    if(ecEl('ec_mode').value === 'maritime'){
+      return ecProducts.reduce((s,p) => s + ecVolume(p)*(p.tarifCBM_USD||0)*ecTauxUSD, 0);
+    }
+    return null; // en aérien le tarif dépend des catégories : on ne devine pas
+  }
+
+  function updateEcTotals(){
+    const maritime = ecEl('ec_mode').value === 'maritime';
+    const vol = ecProducts.reduce((s,p) => s + ecVolume(p), 0);
+    const poids = ecProducts.reduce((s,p) => s + p.quantite*p.poidsUnitaire, 0);
+    const valeur = ecProducts.reduce((s,p) => s + p.quantite*p.valeurUnitaire, 0);
+    ecEl('ec_prodTotals').textContent = (maritime ? vol.toFixed(3)+" CBM" : poids.toFixed(1)+" kg") + " · " + fmtGNF(valeur);
+
+    const base = Number(ecEl('ec_base').value)||0;
+    const rabais = Number(ecEl('ec_rabais').value)||0;
+    const extras = ecExtras.reduce((s,x) => s + x.montant, 0);
+    ecEl('ec_totalLine').textContent = "Total : " + fmtGNF(base - rabais + extras);
+
+    const calc = ecComputeBase();
+    ecEl('ec_baseHint').textContent = calc == null
+      ? "Voie aérienne : les frais dépendent des catégories, saisis-les à la main."
+      : "Calcul depuis les produits : " + fmtGNF(calc)
+        + (Math.abs(calc - base) > 1 ? " — différent des frais saisis." : " — conforme aux frais saisis.");
+  }
+  ['ec_base','ec_rabais'].forEach(id => ecEl(id).addEventListener('input', updateEcTotals));
+
+  ecEl('ec_recalc').addEventListener('click', () => {
+    const calc = ecComputeBase();
+    if(calc == null){ ecAlert('ec_saveAlert', "Recalcul possible seulement en maritime."); return; }
+    ecEl('ec_base').value = Math.round(calc);
+    updateEcTotals();
+  });
+
+  ecEl('ec_cancelBtn').addEventListener('click', () => {
+    ecEl('ec_editor').style.display = 'none';
+    ecDocId = null; ecData = null;
+  });
+
+  ecEl('ec_saveBtn').addEventListener('click', async () => {
+    if(!ecDocId) return;
+    ecAlert('ec_saveAlert', '');
+    if(!ecProducts.length){ ecAlert('ec_saveAlert', "Il faut au moins un produit."); return; }
+    if(ecProducts.some(p => !p.nom.trim())){ ecAlert('ec_saveAlert', "Chaque produit doit avoir une désignation."); return; }
+
+    const maritime = ecEl('ec_mode').value === 'maritime';
+    const base = Number(ecEl('ec_base').value)||0;
+    const rabais = Number(ecEl('ec_rabais').value)||0;
+    const extras = ecExtras.filter(x => x.label.trim() || x.montant);
+    const total = base - rabais + extras.reduce((s,x)=>s+x.montant,0);
+
+    const btn = ecEl('ec_saveBtn'), txt = btn.textContent;
+    btn.disabled = true; btn.textContent = "Enregistrement...";
+    try{
+      await db.collection('colis').doc(ecDocId).update({
+        // numeroSuivi volontairement absent : il ne doit jamais changer
+        statut: ecEl('ec_statut').value,
+        mode: maritime ? 'maritime' : 'aerien',
+        route: { depart: ecEl('ec_depart').value.trim(), arrivee: ecEl('ec_arrivee').value.trim() },
+        expediteur: {
+          nom: ecEl('ec_s_nom').value.trim(), prenom: ecEl('ec_s_prenom').value.trim(),
+          telephone: ecEl('ec_s_tel').value.trim(), email: ecEl('ec_s_email').value.trim(),
+          adresse: ecEl('ec_s_adresse').value.trim()
+        },
+        destinataire: {
+          nom: ecEl('ec_d_nom').value.trim(), prenom: ecEl('ec_d_prenom').value.trim(),
+          telephone: ecEl('ec_d_tel').value.trim(), email: ecEl('ec_d_email').value.trim(),
+          adresse: ecEl('ec_d_adresse').value.trim()
+        },
+        produits: ecProducts.map(p => {
+          const vol = ecVolume(p);
+          return {
+            nom:p.nom.trim(), quantite:p.quantite, valeurUnitaire:p.valeurUnitaire,
+            poidsUnitaire:p.poidsUnitaire, categorie:p.categorie,
+            longueur:p.longueur, largeur:p.largeur, hauteur:p.hauteur,
+            volume: vol,
+            tarifCBM_USD: maritime ? (p.tarifCBM_USD||0) : null,
+            fraisLigneUSD: maritime ? vol*(p.tarifCBM_USD||0) : null,
+            fraisLigne: maritime ? vol*(p.tarifCBM_USD||0)*ecTauxUSD : null,
+            tarifPersonnalise: p.tarifPersonnalise || {actif:false}
+          };
+        }),
+        poidsTotal: ecProducts.reduce((s,p)=>s+p.quantite*p.poidsUnitaire,0),
+        volumeTotal: ecProducts.reduce((s,p)=>s+ecVolume(p),0),
+        valeurTotal: ecProducts.reduce((s,p)=>s+p.quantite*p.valeurUnitaire,0),
+        'frais.fraisBase': base,
+        'frais.rabais': rabais,
+        'frais.extras': extras.map(x => ({label:x.label.trim(), montant:x.montant})),
+        'frais.total': total,
+        // Trace de la correction : qui, quand, et le total d'avant
+        modification: {
+          date: firebase.firestore.FieldValue.serverTimestamp(),
+          par: auth.currentUser ? auth.currentUser.email : null,
+          ancienTotal: (ecData.frais && ecData.frais.total) || 0
+        }
+      });
+      ecAlert('ec_saveAlert', "Colis " + ecData.numeroSuivi + " mis à jour. Pense à renvoyer le reçu au client si les frais ont changé.", true);
+      const snap = await db.collection('colis').doc(ecDocId).get();
+      ecData = snap.data();
+    }catch(e){
+      console.error(e);
+      ecAlert('ec_saveAlert', "Enregistrement impossible. Vérifie ta connexion et réessaie.");
+    }finally{
+      btn.disabled = false; btn.textContent = txt;
+    }
+  });
+
 </script>
 
 </body>
