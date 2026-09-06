@@ -444,7 +444,11 @@
 
   // Taux par défaut si aucun taux n'est défini dans Configuration > Routes & Tarifs
   let GNF_PER_USD = 9345;
-  let TARIF_CBM = 700000; // GNF par CBM en maritime — ajustable via config/general.tarifCBM_GNF
+  // Tarif maritime : la référence est le montant en dollars par CBM, comme dans
+  // Configuration > Routes & Tarifs (config/general.tarifCBM_USD). L'équivalent
+  // en francs est recalculé à chaque changement de taux.
+  let TARIF_CBM_USD = 370;
+  let TARIF_CBM = TARIF_CBM_USD * GNF_PER_USD;
 
   // Coordonnées utilisées par le bouton "Au nom de l'entreprise" — adapte si besoin
   const COMPANY_INFO = { nom: "Africa Vision Voyage", telephone: "612398318", email: "" };
@@ -493,12 +497,13 @@
 
   const fmtGNF = n => new Intl.NumberFormat('fr-FR').format(Math.round(n||0)) + " GNF";
   const fmtUSD = n => "≈ " + new Intl.NumberFormat('fr-FR', {maximumFractionDigits:1}).format((n||0)/GNF_PER_USD) + " USD";
+  const fmtUSDplain = n => new Intl.NumberFormat('fr-FR', {maximumFractionDigits:2}).format(n||0) + " USD";
 
   // ---------------- STATE ----------------
   let currentStep = 1;
   let destIndex = 0;
   let productSeq = 0;
-  // {id, nom, quantite, valeurUnitaire, poidsUnitaire, categorie,
+  // {id, nom, quantite, valeurUnitaire, poidsUnitaire, cbm, categorie,
   //  tarifLibre, categorieLibre, montantLibre}
   let products = [];
   let extraFees = [];  // {id, label, montant}
@@ -508,7 +513,7 @@
     productSeq++;
     return {
       id:productSeq, nom:"", quantite:1, valeurUnitaire:0, poidsUnitaire:0,
-      longueur:0, largeur:0, hauteur:0, categorie:CATEGORIES[0]?.nom || "",
+      cbm:0, categorie:CATEGORIES[0]?.nom || "",
       // Maritime uniquement : catégorie et montant écrits à la main par l'agent
       tarifLibre:false, categorieLibre:"", montantLibre:0
     };
@@ -660,15 +665,17 @@
 
   // ---------------- TAUX DE CHANGE (Firestore) ----------------
   db.collection('config').doc('general').get().then(doc => {
-    if(doc.exists && doc.data().tauxChangeGNFUSD){
-      GNF_PER_USD = Number(doc.data().tauxChangeGNFUSD);
-      updateFees();
-    }
-    if(doc.exists && doc.data().tarifCBM_GNF){
-      TARIF_CBM = Number(doc.data().tarifCBM_GNF);
-      updateFees();
-    }
-  }).catch(() => { /* on garde le taux par défaut */ });
+    if(!doc.exists) return;
+    const c = doc.data();
+    if(c.tauxChangeGNFUSD) GNF_PER_USD = Number(c.tauxChangeGNFUSD);
+    // Le tarif de référence est en dollars ; on accepte encore l'ancien champ
+    // en francs pour les configurations qui n'ont pas été migrées.
+    if(c.tarifCBM_USD) TARIF_CBM_USD = Number(c.tarifCBM_USD);
+    else if(c.tarifCBM_GNF) TARIF_CBM_USD = Number(c.tarifCBM_GNF)/GNF_PER_USD;
+    TARIF_CBM = TARIF_CBM_USD * GNF_PER_USD;
+    renderProducts();
+    updateFees();
+  }).catch(() => { /* on garde le taux et le tarif par défaut */ });
 
   // ---------------- CATEGORIES (Firestore) ----------------
   db.collection('categories').get().then(snap => {
@@ -750,12 +757,11 @@
           <label>Poids unitaire (kg) *</label>
           <div class="input-shell"><input type="number" class="p-poids" min="0" step="0.1" value="${p.poidsUnitaire}"></div>
         </div>
-        <div class="field dims-field" style="display:${transportMode==='maritime'?'block':'none'};">
-          <label>Dimensions unitaires — L × l × H (cm) *</label>
-          <div class="grid-2" style="grid-template-columns:1fr 1fr 1fr; gap:8px;">
-            <div class="input-shell"><input type="number" class="p-long" min="0" step="1" placeholder="L" value="${p.longueur}"></div>
-            <div class="input-shell"><input type="number" class="p-larg" min="0" step="1" placeholder="l" value="${p.largeur}"></div>
-            <div class="input-shell"><input type="number" class="p-haut" min="0" step="1" placeholder="H" value="${p.hauteur}"></div>
+        <div class="field cbm-field" style="display:${transportMode==='maritime'?'block':'none'};">
+          <label>Volume total de la ligne (CBM) *</label>
+          <div class="input-shell">
+            <input type="number" class="p-cbm" min="0" step="0.001" placeholder="Ex : 1.250" value="${p.cbm}">
+            <span class="unit-suffix">CBM</span>
           </div>
         </div>
         <div class="field">
@@ -767,13 +773,13 @@
             </label>
             <div class="cat-standard" style="display:${p.tarifLibre?'none':'block'};">
               <div class="input-shell"><select class="p-cat">${categoryOptions(p.categorie)}</select></div>
-              <div class="cat-hint">Indicatif : le tarif appliqué est le tarif maritime général, ${fmtGNF(TARIF_CBM)} par CBM</div>
+              <div class="cat-hint">Indicatif : le tarif appliqué est le tarif maritime général, ${fmtUSDplain(TARIF_CBM_USD)} par CBM (${fmtGNF(TARIF_CBM)})</div>
             </div>
             <div class="cat-libre" style="display:${p.tarifLibre?'block':'none'};">
               <div class="input-shell"><input type="text" class="p-catlibre" placeholder="Catégorie — ex : Moteur, meubles, carrelage..." value="${escAttr(p.categorieLibre)}"></div>
               <div class="input-shell" style="margin-top:8px;">
-                <input type="number" class="p-montant" min="0" placeholder="Montant par CBM (GNF)" value="${p.montantLibre||0}">
-                <span class="unit-suffix">GNF / CBM</span>
+                <input type="number" class="p-montant" min="0" step="0.01" placeholder="Montant par CBM (USD)" value="${p.montantLibre||0}">
+                <span class="unit-suffix">USD / CBM</span>
               </div>
               <div class="cat-hint p-libre-hint"></div>
             </div>
@@ -791,7 +797,7 @@
 
       const q = row.querySelector('.p-nom'), qte = row.querySelector('.p-qte'),
             val = row.querySelector('.p-val'), poids = row.querySelector('.p-poids'),
-            long = row.querySelector('.p-long'), larg = row.querySelector('.p-larg'), haut = row.querySelector('.p-haut'),
+            cbm = row.querySelector('.p-cbm'),
             cat = row.querySelector('.p-cat'),
             libre = row.querySelector('.p-libre'), catLibre = row.querySelector('.p-catlibre'),
             montant = row.querySelector('.p-montant');
@@ -800,7 +806,7 @@
         p.nom = q.value; p.quantite = Number(qte.value)||0; p.valeurUnitaire = Number(val.value)||0;
         p.categorie = cat.value;
         if(poids) p.poidsUnitaire = Number(poids.value)||0;
-        if(long){ p.longueur = Number(long.value)||0; p.largeur = Number(larg.value)||0; p.hauteur = Number(haut.value)||0; }
+        if(cbm) p.cbm = Number(cbm.value)||0;
 
         // Maritime : bascule entre catégorie enregistrée et saisie libre
         if(libre){
@@ -811,21 +817,21 @@
           row.querySelector('.cat-libre').style.display = p.tarifLibre ? 'block' : 'none';
           const hint = row.querySelector('.p-libre-hint');
           if(hint){
-            const vol = p.quantite*((p.longueur*p.largeur*p.hauteur)/1e6);
-            hint.textContent = fmtGNF(p.montantLibre) + " × " + vol.toFixed(3) + " CBM = " + fmtGNF(p.montantLibre*vol);
+            const vol = productVolume(p);
+            hint.textContent = fmtUSDplain(p.montantLibre) + " × " + vol.toFixed(3) + " CBM = " + fmtGNF(productFeeMaritime(p));
           }
         }
 
         const subPoids = row.querySelector('.sub-poids');
         if(subPoids) subPoids.textContent = (p.quantite*p.poidsUnitaire).toFixed(1) + " kg";
         const subVolume = row.querySelector('.sub-volume');
-        if(subVolume) subVolume.textContent = (p.quantite*(p.longueur*p.largeur*p.hauteur)/1e6).toFixed(3) + " CBM";
+        if(subVolume) subVolume.textContent = productVolume(p).toFixed(3) + " CBM";
         row.querySelector('.sub-valeur').textContent = fmtGNF(p.quantite*p.valeurUnitaire);
         updateProductTotals();
       }
       [q,qte,val,cat].forEach(el => el.addEventListener('input', sync));
       if(poids) poids.addEventListener('input', sync);
-      if(long) [long,larg,haut].forEach(el => el.addEventListener('input', sync));
+      if(cbm) cbm.addEventListener('input', sync);
       if(libre){
         libre.addEventListener('change', sync);
         [catLibre, montant].forEach(el => el.addEventListener('input', sync));
@@ -889,14 +895,18 @@
   function computeTotalVolume(){
     return products.reduce((s,p) => s + productVolume(p), 0);
   }
+  // Le CBM est saisi directement par l'agent : c'est le volume total de la
+  // ligne, quantité comprise. Aucun calcul depuis des dimensions.
   function productVolume(p){
-    return p.quantite*((p.longueur*p.largeur*p.hauteur)/1e6);
+    return Number(p.cbm)||0;
   }
   // Frais d'une ligne en maritime : montant par CBM × volume de la ligne.
-  // Le montant est soit celui écrit à la main, soit le tarif maritime général.
+  // Le montant est en dollars, soit écrit à la main, soit le tarif général.
+  function productTarifUSD(p){
+    return p.tarifLibre ? (Number(p.montantLibre)||0) : TARIF_CBM_USD;
+  }
   function productFeeMaritime(p){
-    const tarif = p.tarifLibre ? (Number(p.montantLibre)||0) : TARIF_CBM;
-    return productVolume(p) * tarif;
+    return productVolume(p) * productTarifUSD(p) * GNF_PER_USD;
   }
   function computeFeeBase(){
     if(transportMode === 'maritime'){
@@ -961,12 +971,12 @@
               return false;
             }
             if(p.montantLibre<=0){
-              showAlert("Écris un montant par CBM supérieur à 0 pour la catégorie « " + p.categorieLibre.trim() + " ».");
+              showAlert("Écris un montant en dollars par CBM supérieur à 0 pour la catégorie « " + p.categorieLibre.trim() + " ».");
               return false;
             }
           }
-          if(p.longueur<=0 || p.largeur<=0 || p.hauteur<=0){
-            showAlert("Chaque produit doit avoir des dimensions (L × l × H) supérieures à 0 pour un envoi maritime.");
+          if(productVolume(p)<=0){
+            showAlert("Chaque produit doit avoir un volume (CBM) supérieur à 0 pour un envoi maritime.");
             return false;
           }
         }else if(p.poidsUnitaire<=0){
@@ -1031,7 +1041,7 @@
       const detailTarif = (transportMode==='maritime' && p.tarifLibre)
         ? `<div class="prod-line" style="color:var(--slate-light); font-size:12px;">
              <span>↳ ${p.categorieLibre.trim() || 'Catégorie libre'}</span>
-             <span>${fmtGNF(p.montantLibre)}/CBM · ${fmtGNF(productFeeMaritime(p))}</span>
+             <span>${fmtUSDplain(p.montantLibre)}/CBM · ${fmtGNF(productFeeMaritime(p))}</span>
            </div>`
         : '';
       return `
@@ -1114,17 +1124,23 @@
       produits: products.map(p => ({
         nom:p.nom, quantite:p.quantite, valeurUnitaire:p.valeurUnitaire,
         poidsUnitaire:p.poidsUnitaire, categorie:effectiveCategory(p),
-        longueur:p.longueur, largeur:p.largeur, hauteur:p.hauteur,
         volume: productVolume(p),
+        tarifCBM_USD: transportMode === 'maritime' ? productTarifUSD(p) : null,
         fraisLigne: transportMode === 'maritime' ? productFeeMaritime(p) : (p.quantite*p.poidsUnitaire)*categoryTarif(p.categorie),
         tarifPersonnalise: (transportMode === 'maritime' && p.tarifLibre)
-          ? { actif:true, categorie:p.categorieLibre.trim(), montant:p.montantLibre, mode:'cbm' }
+          ? { actif:true, categorie:p.categorieLibre.trim(), montantUSD:p.montantLibre, mode:'cbm' }
           : { actif:false }
       })),
       poidsTotal: products.reduce((s,p)=>s+p.quantite*p.poidsUnitaire,0),
       volumeTotal: computeTotalVolume(),
       valeurTotal: products.reduce((s,p)=>s+p.quantite*p.valeurUnitaire,0),
-      frais: { fraisBase: base, rabais, extras: extraFees.map(f=>({label:f.label, montant:f.montant})), total },
+      frais: {
+        fraisBase: base, rabais,
+        extras: extraFees.map(f=>({label:f.label, montant:f.montant})),
+        total,
+        tarifCBM_USD: transportMode === 'maritime' ? TARIF_CBM_USD : null,
+        tauxChangeGNFUSD: GNF_PER_USD
+      },
       dateCreation: firebase.firestore.FieldValue.serverTimestamp(),
       creePar: window._currentUser ? window._currentUser.uid : null
     };
