@@ -128,6 +128,18 @@
   .ec-extra{display:grid; grid-template-columns:1fr 120px 32px; gap:8px; align-items:center; margin-top:8px;}
   .ec-alert{display:none; background:#fdecec; color:#a32621; border:1px solid #f3c6c4; border-radius:10px; padding:10px 12px; font-size:13px; margin:12px 0; line-height:1.45;}
   .ec-alert.show{display:block;}
+  .rate-btn{display:none; border:1.5px solid var(--gold); background:#fff8e8; color:var(--navy-900); border-radius:11px; padding:11px 14px; font-weight:600; font-size:13.5px; font-family:inherit; cursor:pointer; text-align:left;}
+  .rate-row{display:grid; grid-template-columns:22px 1fr auto; gap:10px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .rate-row:last-child{border-bottom:none;}
+  .rate-row input{width:18px; height:18px; accent-color:var(--navy-700);}
+  .rate-row .rn{font-weight:700; color:var(--navy-900);}
+  .rate-row .rs{font-size:11.5px; color:var(--slate);}
+  .rate-row .ra{text-align:right; white-space:nowrap;}
+  .rate-row .old{font-size:11.5px; color:var(--slate-light); text-decoration:line-through;}
+  .rate-row .new{font-weight:700; color:var(--navy-900);}
+  .rate-row .tag{display:inline-block; font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:20px; background:#e8f6ee; color:#1e7a46; margin-left:6px;}
+  .rate-check{display:flex; gap:8px; align-items:flex-start; font-size:13px; color:var(--ink); margin:6px 0; line-height:1.4; cursor:pointer;}
+  .rate-check input{margin-top:2px; accent-color:var(--navy-700);}
   .modal-section h4{font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--slate-light); margin:0 0 8px;}
   .modal-line{display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
   .modal-line:last-child{border-bottom:none;}
@@ -185,6 +197,7 @@
         <option value="asc">Plus anciens</option>
       </select>
     </div>
+    <button class="rate-btn" id="rateOpenBtn" type="button">💱 Actualiser le taux maritime des colis en transit</button>
   </div>
 
   <div class="list-head">
@@ -263,6 +276,40 @@
     </div>
     <div class="ec-alert" id="codePromptAlert"></div>
     <button class="ec-btn" id="codeValidate" style="margin-top:12px;">Valider</button>
+  </div>
+</div>
+
+<!-- MODAL ACTUALISATION DU TAUX MARITIME -->
+<div class="modal-overlay" id="rateOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="cc-track" style="font-size:16px;">💱 Taux maritime</span>
+      <button class="modal-close" id="rateClose" aria-label="Fermer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="ec-note">Le tarif maritime est fixé en dollars (USD / CBM). Cet outil recalcule en GNF les frais de base des colis maritimes déjà enregistrés, avec le nouveau taux. Le rabais et les frais supplémentaires (déjà en GNF) ne changent pas. Le reçu de chaque colis affichera automatiquement le nouveau montant.</div>
+
+    <div class="modal-section">
+      <div class="ec-grid">
+        <div class="ec-field"><label>Ancien taux (GNF pour 1 USD)</label><div class="ec-shell"><input type="number" id="rate_old" min="1"></div></div>
+        <div class="ec-field"><label>Nouveau taux (GNF pour 1 USD)</label><div class="ec-shell"><input type="number" id="rate_new" min="1"></div></div>
+      </div>
+      <div class="ec-hint" style="margin-top:0;">L'ancien taux sert pour les colis qui n'ont pas encore de taux enregistré. Les colis déjà actualisés utilisent leur propre taux.</div>
+      <label class="rate-check"><input type="checkbox" id="rate_saveDefault" checked> Enregistrer aussi ce nouveau taux comme taux par défaut (nouveaux colis)</label>
+      <label class="rate-check"><input type="checkbox" id="rate_inclAttente"> Inclure aussi les colis maritimes « En attente »</label>
+      <button class="ec-btn" id="ratePreviewBtn" style="margin-top:8px; background:var(--navy-900); color:#fff;">Voir les colis concernés</button>
+    </div>
+
+    <div class="modal-section" id="rateListSection" style="display:none;">
+      <h4>Colis concernés <button class="ec-add" id="rateToggleAll">Tout cocher / décocher</button></h4>
+      <div id="rateList"></div>
+      <div class="ec-total" id="rateSummary" style="margin-top:10px;">—</div>
+    </div>
+
+    <div class="ec-alert" id="rateAlert"></div>
+    <button class="ec-btn" id="rateApplyBtn" style="display:none; background:var(--gold); color:var(--navy-950);">Appliquer le nouveau taux</button>
+    <button class="ec-ghost" id="rateCancelBtn" style="width:100%; margin-top:8px;">Fermer</button>
   </div>
 </div>
 
@@ -407,6 +454,7 @@
       userProfile = await loadUserProfile();
       canDeleteColis = !!userProfile.canDelete;
       await loadEditConfig();
+      document.getElementById('rateOpenBtn').style.display = userProfile.isDga ? 'block' : 'none';
       loadColis();
     }
     else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
@@ -639,6 +687,7 @@
 
   let ecDocId = null, ecData = null, ecProducts = [], ecExtras = [];
   let ecTauxUSD = 9345, ecTarifCBM_USD = 370, ecCodeHash = null, ecCodeOk = false;
+  let ecAfterCode = null; // action à lancer une fois le code validé
 
   // Le code n'est jamais stocké en clair : on compare des empreintes SHA-256
   async function hashCode(txt){
@@ -673,6 +722,7 @@
   const codeOverlay = ecEl('codeOverlay');
   ecEl('modalEditLink').addEventListener('click', (e) => {
     e.preventDefault();
+    ecAfterCode = openEditor;
     if(ecCodeOk){ openEditor(); return; }   // déjà validé pendant cette session
     if(!ecCodeHash){
       alert("Aucun code de modification n'est défini. Va dans Configuration › Routes & Tarifs pour en créer un.");
@@ -698,7 +748,7 @@
     }
     ecCodeOk = true;
     codeOverlay.classList.remove('show');
-    openEditor();
+    if(ecAfterCode) ecAfterCode();
   }
 
   // ---- Ouverture de l'éditeur ----
@@ -934,6 +984,183 @@
       ecAlert('ec_saveAlert', "Enregistrement impossible. Vérifie ta connexion et réessaie.");
     }finally{
       btn.disabled = false; btn.textContent = txt;
+    }
+  });
+
+
+  // =====================================================================
+  // ACTUALISATION DU TAUX MARITIME — DGA seulement, après saisie du code
+  // Base USD conservée : nouveaux frais de base = anciens frais × (nouveau taux / ancien taux)
+  // =====================================================================
+  const rateOverlay = ecEl('rateOverlay');
+  let rateItems = []; // {id, data, r0, oldBase, newBase, oldTotal, newTotal, paye, checked}
+
+  function openRateTool(){
+    ecEl('rate_old').value = ecTauxUSD;
+    ecEl('rate_new').value = '';
+    ecEl('rateListSection').style.display = 'none';
+    ecEl('rateApplyBtn').style.display = 'none';
+    ecAlert('rateAlert', '');
+    rateItems = [];
+    rateOverlay.classList.add('show');
+    setTimeout(() => ecEl('rate_new').focus(), 100);
+  }
+
+  ecEl('rateOpenBtn').addEventListener('click', () => {
+    if(!userProfile.isDga){ alert("Réservé au DGA."); return; }
+    ecAfterCode = openRateTool;
+    if(ecCodeOk){ openRateTool(); return; }
+    if(!ecCodeHash){
+      alert("Aucun code de modification n'est défini. Va dans Configuration › Routes & Tarifs pour en créer un.");
+      return;
+    }
+    ecEl('codePrompt').value = '';
+    ecAlert('codePromptAlert', '');
+    codeOverlay.classList.add('show');
+    setTimeout(() => ecEl('codePrompt').focus(), 100);
+  });
+  const closeRate = () => rateOverlay.classList.remove('show');
+  ecEl('rateClose').addEventListener('click', closeRate);
+  ecEl('rateCancelBtn').addEventListener('click', closeRate);
+  rateOverlay.addEventListener('click', e => { if(e.target === rateOverlay) closeRate(); });
+
+  // Taux déjà mémorisé sur le colis (après une première actualisation), sinon l'ancien taux saisi
+  function tauxDuColis(c, fallback){
+    const t = Number(c.tauxChange || (c.frais && c.frais.tauxChange) || 0);
+    return t > 0 ? t : fallback;
+  }
+
+  async function sommePaiements(ids){
+    const tot = {};
+    for(let i = 0; i < ids.length; i += 10){
+      const part = ids.slice(i, i + 10);
+      const snap = await db.collection('paiements').where('colisId', 'in', part).get();
+      snap.forEach(d => {
+        const p = d.data();
+        tot[p.colisId] = (tot[p.colisId] || 0) + (Number(p.montant) || 0);
+      });
+    }
+    return tot;
+  }
+
+  ecEl('ratePreviewBtn').addEventListener('click', async () => {
+    ecAlert('rateAlert', '');
+    const r0def = Number(ecEl('rate_old').value) || 0;
+    const r1 = Number(ecEl('rate_new').value) || 0;
+    if(r0def <= 0 || r1 <= 0){ ecAlert('rateAlert', "Saisis l'ancien et le nouveau taux."); return; }
+    const statuts = ecEl('rate_inclAttente').checked ? ['en_transit','en_attente'] : ['en_transit'];
+
+    const cibles = allDocs.filter(({data}) => data.mode === 'maritime' && statuts.includes(data.statut) && canManageColis(data));
+    const btn = ecEl('ratePreviewBtn'); btn.disabled = true; btn.textContent = "Chargement…";
+    let payes = {};
+    try{ payes = await sommePaiements(cibles.map(x => x.id)); }
+    catch(e){ console.warn("Paiements illisibles", e); }
+    btn.disabled = false; btn.textContent = "Voir les colis concernés";
+
+    rateItems = cibles.map(({id, data}) => {
+      const f = data.frais || {};
+      const r0 = tauxDuColis(data, r0def);
+      const oldBase = Number(f.fraisBase) || 0;
+      const newBase = Math.round(oldBase * r1 / r0);
+      const oldTotal = Number(f.total) || 0;
+      const newTotal = oldTotal - oldBase + newBase;
+      const paye = payes[id] || 0;
+      const solde = oldTotal > 0 && paye >= oldTotal;
+      return { id, data, r0, oldBase, newBase, oldTotal, newTotal, paye, solde,
+               checked: !solde && r0 !== r1 && oldBase > 0 };
+    });
+    renderRateList();
+  });
+
+  function renderRateList(){
+    ecEl('rateListSection').style.display = 'block';
+    const list = ecEl('rateList');
+    if(!rateItems.length){
+      list.innerHTML = '<div class="ec-hint">Aucun colis maritime concerné.</div>';
+      ecEl('rateSummary').textContent = '—';
+      ecEl('rateApplyBtn').style.display = 'none';
+      return;
+    }
+    list.innerHTML = '';
+    rateItems.forEach((it, i) => {
+      const dest = it.data.destinataire || {};
+      const row = document.createElement('label');
+      row.className = 'rate-row';
+      const reste = it.newTotal - it.paye;
+      row.innerHTML = `
+        <input type="checkbox" ${it.checked ? 'checked' : ''}>
+        <div>
+          <div class="rn">${escAttr(it.data.numeroSuivi || it.id)}${it.solde ? '<span class="tag">Soldé</span>' : ''}</div>
+          <div class="rs">${escAttr([dest.prenom, dest.nom].filter(Boolean).join(' ') || '—')} · ${(it.data.volumeTotal||0).toFixed(3)} CBM · taux ${new Intl.NumberFormat('fr-FR').format(it.r0)}</div>
+          ${it.paye ? `<div class="rs">Déjà payé : ${fmtGNF(it.paye)} · reste après actualisation : ${fmtGNF(reste)}</div>` : ''}
+        </div>
+        <div class="ra"><div class="old">${fmtGNF(it.oldTotal)}</div><div class="new">${fmtGNF(it.newTotal)}</div></div>`;
+      row.querySelector('input').addEventListener('change', e => { rateItems[i].checked = e.target.checked; updateRateSummary(); });
+      list.appendChild(row);
+    });
+    updateRateSummary();
+  }
+
+  function updateRateSummary(){
+    const sel = rateItems.filter(x => x.checked);
+    const diff = sel.reduce((s,x) => s + (x.newTotal - x.oldTotal), 0);
+    ecEl('rateSummary').textContent = sel.length + " colis sélectionné(s) · écart total : "
+      + (diff >= 0 ? '+' : '') + fmtGNF(diff);
+    ecEl('rateApplyBtn').style.display = sel.length ? 'block' : 'none';
+  }
+
+  ecEl('rateToggleAll').addEventListener('click', () => {
+    const tous = rateItems.every(x => x.checked);
+    rateItems.forEach(x => x.checked = !tous);
+    renderRateList();
+  });
+
+  ecEl('rateApplyBtn').addEventListener('click', async () => {
+    const r1 = Number(ecEl('rate_new').value) || 0;
+    const sel = rateItems.filter(x => x.checked);
+    if(!sel.length || r1 <= 0) return;
+    if(!confirm("Appliquer le taux de " + new Intl.NumberFormat('fr-FR').format(r1) + " GNF / USD à " + sel.length + " colis ?\n\nLes reçus de ces colis afficheront le nouveau montant.")) return;
+
+    const btn = ecEl('rateApplyBtn'); btn.disabled = true; btn.textContent = "Application…";
+    const par = auth.currentUser ? auth.currentUser.email : null;
+    try{
+      for(let i = 0; i < sel.length; i += 400){
+        const batch = db.batch();
+        sel.slice(i, i + 400).forEach(it => {
+          const produits = (it.data.produits || []).map(p => {
+            const q = Object.assign({}, p);
+            if(q.fraisLigneUSD != null) q.fraisLigne = Number(q.fraisLigneUSD) * r1;
+            else if(q.fraisLigne != null) q.fraisLigne = Number(q.fraisLigne) * r1 / it.r0;
+            return q;
+          });
+          batch.update(db.collection('colis').doc(it.id), {
+            'frais.fraisBase': it.newBase,
+            'frais.total': it.newTotal,
+            produits,
+            tauxChange: r1,
+            majTaux: { date: firebase.firestore.FieldValue.serverTimestamp(), par, ancienTaux: it.r0, nouveauTaux: r1 },
+            historiqueTaux: firebase.firestore.FieldValue.arrayUnion({
+              date: new Date().toISOString(), par,
+              ancienTaux: it.r0, nouveauTaux: r1,
+              ancienTotal: it.oldTotal, nouveauTotal: it.newTotal
+            })
+          });
+        });
+        await batch.commit();
+      }
+      if(ecEl('rate_saveDefault').checked){
+        await db.collection('config').doc('general').set({ tauxChangeGNFUSD: r1 }, { merge: true });
+        ecTauxUSD = r1;
+      }
+      ecAlert('rateAlert', sel.length + " colis actualisé(s) au taux de " + new Intl.NumberFormat('fr-FR').format(r1) + " GNF / USD. Pense à prévenir les clients concernés.", true);
+      ecEl('rateApplyBtn').style.display = 'none';
+      ecEl('rateListSection').style.display = 'none';
+      loadColis();
+    }catch(e){
+      console.error(e);
+      ecAlert('rateAlert', "Échec de l'actualisation. Vérifie ta connexion et réessaie.");
+    }finally{
+      btn.disabled = false; btn.textContent = "Appliquer le nouveau taux";
     }
   });
 
