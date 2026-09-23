@@ -180,6 +180,9 @@
   .success-screen h2{font-family:'Space Grotesk',sans-serif; font-size:20px; margin:0 0 6px;}
   .success-track{font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; color:var(--navy-800); background:var(--cream); display:inline-block; padding:8px 18px; border-radius:10px; margin:12px 0 22px;}
   .success-actions{display:flex; flex-direction:column; gap:10px; max-width:320px; margin:0 auto;}
+  .lang-switch{margin-left:auto; display:flex; border:1.5px solid var(--line); border-radius:100px; overflow:hidden; background:#fff; flex:none;}
+  .lang-switch .lang-btn{border:none; background:none; font-family:inherit; font-size:12px; font-weight:700; letter-spacing:.03em; color:var(--slate); padding:6px 11px; cursor:pointer;}
+  .lang-switch .lang-btn.active{background:var(--navy-900); color:#fff;}
 </style>
 </head>
 <body>
@@ -193,6 +196,10 @@
     <div>
       <div class="head-title">Nouveau colis</div>
       <div class="head-sub">Créez un envoi étape par étape</div>
+    </div>
+    <div class="lang-switch" id="langSwitch">
+      <button type="button" class="lang-btn active" data-lang="fr">FR</button>
+      <button type="button" class="lang-btn" data-lang="en">EN</button>
     </div>
   </div>
 </header>
@@ -1187,6 +1194,241 @@
   });
 
   renderStep();
+
+  // =====================================================================
+  // LANGUE DE L'INTERFACE — Français (défaut) / Anglais
+  // Rien n'est traduit dans la base : seuls les textes affichés changent.
+  // =====================================================================
+  const I18N = {
+    // Entête et navigation
+    "Nouveau colis":"New shipment",
+    "Créez un envoi étape par étape":"Create a shipment step by step",
+    "Précédent":"Back",
+    "Suivant":"Next",
+    "✓ Créer":"✓ Create",
+    "Retour":"Back",
+    "Envoi de":"Sending from",
+    "vers":"to",
+    "Modifiable uniquement au début de la saisie":"Can only be changed at the start",
+    "Pays de départ":"Country of origin",
+    "Pays de destination":"Destination country",
+    "Aérien":"Air",
+    "Maritime":"Sea",
+    "✈️ Aérien":"✈️ Air",
+    "🚢 Maritime":"🚢 Sea",
+    // Étapes
+    "Expéditeur":"Sender",
+    "Destinataire":"Recipient",
+    "Produits":"Items",
+    "Frais":"Charges",
+    "Résumé":"Summary",
+    "Expéditeur ·":"Sender ·",
+    "Destinataire ·":"Recipient ·",
+    "Personne qui envoie le colis":"Person sending the shipment",
+    "Personne qui recevra le colis":"Person who will receive the shipment",
+    "Contenu du colis":"Shipment contents",
+    "Détaillez chaque produit dans le colis":"List each item in the shipment",
+    "Coûts d'expédition":"Shipping costs",
+    "Calcul des frais de transport":"Transport charges calculation",
+    "Résumé du colis":"Shipment summary",
+    "Vérifiez les informations avant création":"Check the details before creating",
+    "↳ Utiliser mes coordonnées de connexion":"↳ Use my account details",
+    // Champs
+    "Nom *":"Last name *",
+    "Prénom *":"First name *",
+    "Téléphone *":"Phone *",
+    "Email (optionnel)":"Email (optional)",
+    "Adresse":"Address",
+    "Adresse *":"Address *",
+    "Nom de l'expéditeur":"Sender's last name",
+    "Prénom de l'expéditeur":"Sender's first name",
+    "Adresse complète de l'expéditeur":"Sender's full address",
+    "Nom du destinataire":"Recipient's last name",
+    "Prénom du destinataire":"Recipient's first name",
+    "Adresse complète (quartier, ville, repère...)":"Full address (area, city, landmark...)",
+    "email@exemple.com":"email@example.com",
+    // Produits
+    "+ Ajouter un produit":"+ Add an item",
+    "Supprimer":"Remove",
+    "Nom du produit *":"Item name *",
+    "Ex : Nourriture, vêtements...":"E.g. food, clothing...",
+    "Quantité *":"Quantity *",
+    "Valeur unitaire (GNF) *":"Unit value (GNF) *",
+    "Poids unitaire (kg) *":"Unit weight (kg) *",
+    "Volume total de la ligne (CBM) *":"Total volume for this line (CBM) *",
+    "Ex : 1.250":"E.g. 1.250",
+    "Catégorie":"Category",
+    "Écrire moi-même la catégorie et le montant":"Enter the category and amount myself",
+    "Catégorie — ex : Moteur, meubles, carrelage...":"Category — e.g. engine, furniture, tiles...",
+    "Montant par CBM (USD)":"Amount per CBM (USD)",
+    "Détermine le tarif d'expédition au kg":"Sets the shipping rate per kg",
+    "Volume :":"Volume:",
+    "Poids :":"Weight:",
+    "Valeur :":"Value:",
+    "Total":"Total",
+    "produit(s)":"item(s)",
+    // Frais
+    "Frais de base (calculé selon poids × catégorie)":"Base charge (calculated from weight × category)",
+    "Frais de base :":"Base charge:",
+    "Frais de base (CBM) :":"Base charge (CBM):",
+    "Frais de base (poids) :":"Base charge (weight):",
+    "Frais de base":"Base charge",
+    "Rabais appliqué (GNF)":"Discount applied (GNF)",
+    "Rabais":"Discount",
+    "+ Ajouter un frais":"+ Add a charge",
+    "Ex : Douane, assurance...":"E.g. customs, insurance...",
+    "Retirer":"Remove",
+    "Total à payer :":"Total due:",
+    "Total à payer":"Total due",
+    "Montants en GNF (devise d'opération) — conversion USD affichée à titre indicatif":"Amounts in GNF (operating currency) — USD conversion shown for reference only",
+    "Paiement à la création (optionnel)":"Payment at creation (optional)",
+    "Laisse à 0 si le client paiera plus tard — tu pourras enregistrer le paiement à tout moment depuis le reçu ou la page Paiements.":"Leave at 0 if the customer will pay later — you can record the payment any time from the receipt or the Payments page.",
+    "Montant payé maintenant (GNF)":"Amount paid now (GNF)",
+    "Méthode de paiement":"Payment method",
+    "Espèces":"Cash",
+    "Virement bancaire":"Bank transfer",
+    "Autre":"Other",
+    "Frais d'expédition":"Shipping charges",
+    "Catégorie libre":"Custom category",
+    "Non renseignée":"Not provided",
+    // Messages
+    "Connecte-toi pour utiliser cette option.":"Sign in to use this option.",
+    "Le pays de départ et le pays de destination sont identiques. Choisissez deux pays différents.":"The country of origin and the destination country are the same. Please choose two different countries.",
+    "Merci de renseigner le nom, le prénom et le téléphone de l'expéditeur.":"Please provide the sender's last name, first name and phone number.",
+    "Merci de renseigner le nom, le prénom, le téléphone et l'adresse du destinataire.":"Please provide the recipient's last name, first name, phone number and address.",
+    "Chaque produit doit avoir un nom et une quantité supérieurs à 0.":"Every item must have a name and a quantity above 0.",
+    "Écris la catégorie du produit, ou décoche la saisie libre pour utiliser une catégorie enregistrée.":"Enter the item category, or untick the custom entry to use a saved category.",
+    "Chaque produit doit avoir un volume (CBM) supérieur à 0 pour un envoi maritime.":"Every item must have a volume (CBM) above 0 for a sea shipment.",
+    "Chaque produit doit avoir un poids supérieur à 0.":"Every item must have a weight above 0.",
+    "Impossible de créer le colis. Vérifie la configuration Firebase et les règles Firestore.":"Unable to create the shipment. Check the Firebase configuration and the Firestore rules.",
+    // Écran de confirmation
+    "Colis créé avec succès":"Shipment created successfully",
+    "Numéro de suivi":"Tracking number",
+    "🧾 Voir le reçu":"🧾 View receipt",
+    "+ Créer un autre colis":"+ Create another shipment",
+    "Retour au dashboard":"Back to dashboard"
+  };
+
+  // Textes qui contiennent une valeur variable (nombre, nom saisi…)
+  const I18N_RE = [
+    [/^Produit (\d+)$/, "Item $1"],
+    [/^Étape (\d+) sur (\d+)$/, "Step $1 of $2"],
+    [/^Indicatif : le tarif appliqué est le tarif maritime général, (.+) par CBM \((.+)\)$/, "For reference: the general sea rate applies, $1 per CBM ($2)"],
+    [/^Écris un montant en dollars par CBM supérieur à 0 pour la catégorie « (.+) »\.$/, "Enter an amount in dollars per CBM above 0 for the category “$1”."],
+    [/^Payé à la création \((.+)\)$/, "Paid at creation ($1)"],
+    [/^Tél : (.*)$/, "Phone: $1"],
+    [/^Email : (.*)$/, "Email: $1"],
+    [/^Adresse : Non renseignée$/, "Address: Not provided"],
+    [/^Adresse : (.*)$/, "Address: $1"]
+  ];
+
+  let LANG = 'fr';
+  try{ LANG = localStorage.getItem('avLangNouveauColis') === 'en' ? 'en' : 'fr'; }catch(e){}
+
+  const i18nTextNodes = new Map();   // noeud -> texte français d'origine
+  const i18nAttrs = new Map();       // élément -> {attribut: texte français}
+  let i18nBusy = false;
+
+  function i18nTraduire(txt){
+    if(I18N[txt] != null) return I18N[txt];
+    for(const [re, out] of I18N_RE){ if(re.test(txt)) return txt.replace(re, out); }
+    return null;
+  }
+
+  function i18nParcourirTextes(racine){
+    const walker = document.createTreeWalker(racine, NodeFilter.SHOW_TEXT, {
+      acceptNode(n){
+        const p = n.parentNode;
+        if(!p || p.nodeName === 'SCRIPT' || p.nodeName === 'STYLE') return NodeFilter.FILTER_REJECT;
+        return n.nodeValue && n.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    });
+    const list = [];
+    while(walker.nextNode()) list.push(walker.currentNode);
+    return list;
+  }
+
+  const I18N_ATTRS = ['placeholder', 'aria-label', 'title'];
+
+  function i18nAppliquerAnglais(racine){
+    i18nParcourirTextes(racine).forEach(n => {
+      if(i18nTextNodes.has(n)) return;
+      const brut = n.nodeValue, t = brut.trim();
+      const en = i18nTraduire(t);
+      if(en == null || en === t) return;
+      i18nTextNodes.set(n, brut);
+      n.nodeValue = brut.replace(t, en);
+    });
+    const els = [racine].concat(Array.from(racine.querySelectorAll ? racine.querySelectorAll('*') : []));
+    els.forEach(el => {
+      if(!el.getAttribute) return;
+      I18N_ATTRS.forEach(a => {
+        const v = el.getAttribute(a);
+        if(!v) return;
+        const en = i18nTraduire(v.trim());
+        if(en == null || en === v) return;
+        const sauv = i18nAttrs.get(el) || {};
+        if(sauv[a] != null) return;
+        sauv[a] = v; i18nAttrs.set(el, sauv);
+        el.setAttribute(a, en);
+      });
+    });
+  }
+
+  function i18nRestaurerFrancais(){
+    i18nTextNodes.forEach((fr, n) => { if(n.parentNode) n.nodeValue = fr; });
+    i18nTextNodes.clear();
+    i18nAttrs.forEach((attrs, el) => {
+      Object.keys(attrs).forEach(a => el.setAttribute(a, attrs[a]));
+    });
+    i18nAttrs.clear();
+  }
+
+  function setLang(lang){
+    LANG = (lang === 'en') ? 'en' : 'fr';
+    try{ localStorage.setItem('avLangNouveauColis', LANG); }catch(e){}
+    document.documentElement.lang = LANG;
+    document.querySelectorAll('#langSwitch .lang-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.lang === LANG);
+    });
+    i18nBusy = true;
+    i18nRestaurerFrancais();
+    if(LANG === 'en') i18nAppliquerAnglais(document.body);
+    i18nBusy = false;
+  }
+
+  document.querySelectorAll('#langSwitch .lang-btn').forEach(b => {
+    b.addEventListener('click', () => setLang(b.dataset.lang));
+  });
+
+  // Les étapes se redessinent (produits, résumé, messages) : on retraduit
+  // les nouveaux textes dès qu'ils apparaissent.
+  const i18nObserver = new MutationObserver(muts => {
+    if(LANG !== 'en' || i18nBusy) return;
+    i18nBusy = true;
+    muts.forEach(m => {
+      if(m.type === 'childList'){
+        m.addedNodes.forEach(n => {
+          if(n.nodeType === 1) i18nAppliquerAnglais(n);
+          else if(n.nodeType === 3 && n.nodeValue && n.nodeValue.trim()){
+            const brut = n.nodeValue, t = brut.trim(), en = i18nTraduire(t);
+            if(en != null && en !== t){ i18nTextNodes.set(n, brut); n.nodeValue = brut.replace(t, en); }
+          }
+        });
+      }else if(m.type === 'characterData'){
+        const n = m.target;
+        if(!n.nodeValue || !n.nodeValue.trim()) return;
+        i18nTextNodes.delete(n);
+        const brut = n.nodeValue, t = brut.trim(), en = i18nTraduire(t);
+        if(en != null && en !== t){ i18nTextNodes.set(n, brut); n.nodeValue = brut.replace(t, en); }
+      }
+    });
+    i18nBusy = false;
+  });
+  i18nObserver.observe(document.body, {childList:true, subtree:true, characterData:true});
+
+  setLang(LANG);
+
 </script>
 
 
