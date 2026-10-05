@@ -172,6 +172,11 @@
   let GNF_PER_USD = 9345;
   const fmtUSD = n => "≈ " + new Intl.NumberFormat('fr-FR', {maximumFractionDigits:1}).format((n||0)/GNF_PER_USD) + " USD";
   const fmtUSDplain = n => new Intl.NumberFormat('fr-FR', {maximumFractionDigits:2}).format(n||0) + " USD";
+  // Devise de facturation du colis : le maritime est facturé en dollars (USD par CBM),
+  // l'aérien en francs. Les colis créés avant le passage au dollar n'ont pas de champ
+  // devise : ils restent en francs tant qu'ils n'ont pas été convertis.
+  const deviseDe = c => (c && (c.devise || (c.frais && c.frais.devise))) || 'GNF';
+  const fmtMontant = (n, dev) => dev === 'USD' ? fmtUSDplain(n) : fmtGNF(n);
 
   function genReference(dateCreation, numeroSuivi){
     const d = dateCreation && dateCreation.toDate ? dateCreation.toDate() : new Date();
@@ -228,15 +233,30 @@
     const dest = c.destinataire || {};
     const route = c.route || {};
     const frais = c.frais || {};
+    // Un reçu réimprimé doit afficher le montant facturé ce jour-là,
+    // pas un recalcul au taux du moment.
+    if(frais.tauxChangeGNFUSD) GNF_PER_USD = Number(frais.tauxChangeGNFUSD);
+
+    const devise = deviseDe(c);
+    const estUSD = devise === 'USD';
+    const fmtM = n => fmtMontant(n, devise);          // montant dans la devise du colis
+    const equiv = n => estUSD ? fmtGNF((n||0) * GNF_PER_USD) : fmtUSD(n);
+
     const total = frais.total || 0;
-    const paye = paiements.reduce((s,p) => s + (p.montant||0), 0);
+    // Un paiement encaissé avant le passage au dollar reste libellé en francs :
+    // on le ramène dans la devise du colis, sinon le reste à payer serait faux.
+    const montantPaiement = pay => {
+      const m = Number(pay.montant) || 0;
+      const dev = pay.devise || 'GNF';
+      if(dev === devise) return m;
+      const t = Number(pay.tauxConversion || frais.tauxChangeGNFUSD || GNF_PER_USD) || 1;
+      return estUSD ? m / t : m * t;
+    };
+    const paye = paiements.reduce((s,pay) => s + montantPaiement(pay), 0);
     const reste = Math.max(0, total - paye);
     const statut = c.statut || 'en_attente';
     const reference = genReference(c.dateCreation, c.numeroSuivi);
     const estMaritime = c.mode === 'maritime';
-    // Un reçu réimprimé doit afficher le montant facturé ce jour-là,
-    // pas un recalcul au taux du moment.
-    if(frais.tauxChangeGNFUSD) GNF_PER_USD = Number(frais.tauxChangeGNFUSD);
 
     // Volume d'une ligne : enregistré à la création, ou recalculé depuis les
     // dimensions pour les colis créés avant l'ajout du champ.
@@ -316,7 +336,7 @@
           <div class="r-section">
             <h4>Description</h4>
             <table>
-              <thead><tr><th>Produit</th><th class="num">Qté</th><th class="num">${estMaritime ? 'CBM' : 'Poids'}</th><th class="num">Valeur</th></tr></thead>
+              <thead><tr><th>Produit</th><th class="num">Qté</th><th class="num">${estMaritime ? 'CBM' : 'Poids'}</th><th class="num">Valeur (GNF)</th></tr></thead>
               <tbody>
                 ${(c.produits||[]).map(p => `<tr>
                   <td>${p.nom}${ligneCategorie(p)}</td>
@@ -332,24 +352,24 @@
           <div class="r-section">
             <h4>Détail financier</h4>
             ${estMaritime && frais.tarifCBM_USD ? `<div class="r-line"><span>Tarif maritime</span><span>${fmtUSDplain(frais.tarifCBM_USD)} / CBM</span></div>` : ''}
-            <div class="r-line"><span>Frais d'expédition${estMaritime && volumeTotal ? ' (' + volumeTotal.toFixed(3) + ' CBM)' : ''}</span><span>${fmtGNF(frais.fraisBase)}</span></div>
-            ${frais.rabais>0 ? `<div class="r-line"><span>Rabais</span><span>-${fmtGNF(frais.rabais)}</span></div>` : ''}
-            ${(frais.extras||[]).map(f => `<div class="r-line"><span>${f.label||'Frais'}</span><span>${fmtGNF(f.montant)}</span></div>`).join('')}
+            <div class="r-line"><span>Frais d'expédition${estMaritime && volumeTotal ? ' (' + volumeTotal.toFixed(3) + ' CBM)' : ''}</span><span>${fmtM(frais.fraisBase)}</span></div>
+            ${frais.rabais>0 ? `<div class="r-line"><span>Rabais</span><span>-${fmtM(frais.rabais)}</span></div>` : ''}
+            ${(frais.extras||[]).map(f => `<div class="r-line"><span>${f.label||'Frais'}</span><span>${fmtM(f.montant)}</span></div>`).join('')}
             <div class="r-total-box">
-              <div class="row"><span class="lbl">Total à payer</span><span class="val">${fmtGNF(total)}</span></div>
-              <div class="usd">${fmtUSD(total)}</div>
+              <div class="row"><span class="lbl">Total à payer</span><span class="val">${fmtM(total)}</span></div>
+              <div class="usd">${equiv(total)}</div>
             </div>
-            ${frais.tauxChangeGNFUSD ? `<div style="font-size:11px; color:var(--slate-light); text-align:right; margin-top:6px;">Taux appliqué : 1 USD = ${new Intl.NumberFormat('fr-FR').format(frais.tauxChangeGNFUSD)} GNF</div>` : ''}
+            ${frais.tauxChangeGNFUSD ? `<div style="font-size:11px; color:var(--slate-light); text-align:right; margin-top:6px;">${estUSD ? 'Facturé en dollars · ' : 'Taux appliqué : '}1 USD = ${new Intl.NumberFormat('fr-FR').format(frais.tauxChangeGNFUSD)} GNF</div>` : ''}
           </div>
 
           <div class="r-section">
             <h4>Paiement</h4>
             <div class="pay-summary">
-              <div class="pay-box"><div class="l">Total</div><div class="v">${fmtGNF(total)}</div></div>
-              <div class="pay-box green"><div class="l">Payé</div><div class="v">${fmtGNF(paye)}</div></div>
-              <div class="pay-box red"><div class="l">Reste</div><div class="v">${fmtGNF(reste)}</div></div>
+              <div class="pay-box"><div class="l">Total</div><div class="v">${fmtM(total)}</div></div>
+              <div class="pay-box green"><div class="l">Payé</div><div class="v">${fmtM(paye)}</div></div>
+              <div class="pay-box red"><div class="l">Reste</div><div class="v">${fmtM(reste)}</div></div>
             </div>
-            ${paiements.length ? paiements.map(p => `<div class="r-line"><span>${p.methode||'Paiement'} · ${fmtDate(p.date)}</span><span>${fmtGNF(p.montant)}</span></div>`).join('') : '<div class="r-line"><span>Aucun paiement enregistré</span></div>'}
+            ${paiements.length ? paiements.map(pay => `<div class="r-line"><span>${pay.methode||'Paiement'} · ${fmtDate(pay.date)}</span><span>${fmtM(montantPaiement(pay))}</span></div>`).join('') : '<div class="r-line"><span>Aucun paiement enregistré</span></div>'}
           </div>
 
           <div class="r-section">
@@ -392,7 +412,7 @@
       <div class="pay-form-card">
         <h4>Enregistrer un paiement</h4>
         <div class="alert" id="payAlert"></div>
-        <div class="field"><label>Montant (GNF) *</label><div class="input-shell"><input type="number" id="pay_montant" min="0" max="${reste}"></div></div>
+        <div class="field"><label>Montant (${devise}) *</label><div class="input-shell"><input type="number" id="pay_montant" min="0" step="${estUSD ? '0.01' : '1'}" max="${reste}"></div></div>
         <div class="field"><label>Méthode</label><div class="input-shell"><select id="pay_methode">
           <option value="Espèces">Espèces</option>
           <option value="Orange Money">Orange Money</option>
@@ -424,7 +444,7 @@
       }
     });
     document.getElementById('waBtn').addEventListener('click', () => {
-      const msg = `Reçu Africa Vision\nColis : ${c.numeroSuivi||colisId}\nDestinataire : ${[dest.prenom,dest.nom].filter(Boolean).join(' ')}\nTotal : ${fmtGNF(total)}\nPayé : ${fmtGNF(paye)}\nReste : ${fmtGNF(reste)}`;
+      const msg = `Reçu Africa Vision\nColis : ${c.numeroSuivi||colisId}\nDestinataire : ${[dest.prenom,dest.nom].filter(Boolean).join(' ')}\nTotal : ${fmtM(total)}\nPayé : ${fmtM(paye)}\nReste : ${fmtM(reste)}`;
       window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
     });
 
@@ -440,7 +460,7 @@
           return;
         }
         if(montant > reste + 0.01){
-          alertBox.textContent = "Ce montant dépasse le reste à payer (" + fmtGNF(reste) + ").";
+          alertBox.textContent = "Ce montant dépasse le reste à payer (" + fmtM(reste) + ").";
           alertBox.classList.add('show');
           return;
         }
@@ -448,7 +468,7 @@
         try{
           await db.collection('paiements').add({
             colisId, numeroSuivi: c.numeroSuivi || colisId,
-            montant, methode, notes: "",
+            montant, devise, methode, notes: "",
             date: firebase.firestore.FieldValue.serverTimestamp(),
             creePar: window._currentUser ? window._currentUser.uid : null
           });
