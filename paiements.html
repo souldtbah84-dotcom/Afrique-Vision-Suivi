@@ -171,7 +171,7 @@
     <div class="modal-section">
       <h4>Enregistrer un paiement</h4>
       <div class="alert" id="payAlert"></div>
-      <div class="field"><label>Montant (GNF) *</label><div class="input-shell"><input type="number" id="pay_montant" min="0"></div></div>
+      <div class="field"><label id="payMontantLabel">Montant (GNF) *</label><div class="input-shell"><input type="number" id="pay_montant" min="0"></div></div>
       <div class="field"><label>Méthode</label><div class="input-shell"><select id="pay_methode">
         <option value="Espèces">Espèces</option>
         <option value="Orange Money">Orange Money</option>
@@ -211,6 +211,37 @@
 
   const fmtGNF = n => new Intl.NumberFormat('fr-FR').format(Math.round(n||0)) + " GNF";
   const fmtDate = ts => { if(!ts) return '—'; const d = ts.toDate ? ts.toDate() : new Date(ts); return d.toLocaleDateString('fr-FR'); };
+  const fmtUSD = n => new Intl.NumberFormat('fr-FR', {maximumFractionDigits:2}).format(n||0) + " USD";
+  // Devise de facturation : le maritime est facturé en dollars, l'aérien en francs.
+  // Un colis maritime créé avant le passage au dollar n'a pas de champ devise.
+  const deviseDe = c => (c && (c.devise || (c.frais && c.frais.devise))) || 'GNF';
+  const fmtMontant = (n, dev) => dev === 'USD' ? fmtUSD(n) : fmtGNF(n);
+
+  // Taux de secours pour les colis qui n'ont pas gardé le leur
+  let TAUX_DEFAUT = 9345;
+  db.collection('config').doc('general').get()
+    .then(doc => { if(doc.exists && doc.data().tauxChangeGNFUSD) TAUX_DEFAUT = Number(doc.data().tauxChangeGNFUSD); })
+    .catch(() => {});
+
+  // Un paiement encaissé avant le passage au dollar reste libellé en francs :
+  // on le ramène dans la devise de son colis, sinon le reste à payer serait faux.
+  function montantDansDeviseColis(pay, colis){
+    const m = Number(pay.montant) || 0;
+    const devPay = pay.devise || 'GNF';
+    const devColis = deviseDe(colis);
+    if(devPay === devColis) return m;
+    const t = Number(pay.tauxConversion
+      || (colis.frais && colis.frais.tauxChangeGNFUSD)
+      || colis.tauxChange || TAUX_DEFAUT) || 1;
+    return devColis === 'USD' ? m / t : m * t;
+  }
+
+  // Les francs et les dollars ne s'additionnent pas : on affiche les deux.
+  function deuxDevises(t){
+    const lignes = [fmtGNF(t.GNF)];
+    if(t.USD) lignes.push('<span style="font-size:14px; color:var(--slate);">' + fmtUSD(t.USD) + '</span>');
+    return lignes.join('<br>');
+  }
 
   let allColis = [];      // {id, data, montantPaye, resteAPayer, statutPaiement}
   let allPaiements = [];  // {id, data}
@@ -254,13 +285,15 @@
       allPaiements = paySnap.docs.map(d => ({id:d.id, data:d.data()}));
       allColis = colisSnap.docs.map(d => {
         const data = d.data();
+        const devise = deviseDe(data);
         const total = data.frais ? (data.frais.total||0) : 0;
-        const paye = allPaiements.filter(p => p.data.colisId === d.id).reduce((s,p) => s + (p.data.montant||0), 0);
+        const paye = allPaiements.filter(p => p.data.colisId === d.id)
+                                 .reduce((s,p) => s + montantDansDeviseColis(p.data, data), 0);
         const reste = Math.max(0, total - paye);
         let statut = 'impaye';
         if(paye > 0 && reste <= 0) statut = 'paye';
         else if(paye > 0) statut = 'partiel';
-        return {id:d.id, data, total, paye, reste, statut};
+        return {id:d.id, data, devise, total, paye, reste, statut};
       });
       renderKPIs();
       applyFilters();
@@ -277,11 +310,11 @@
   }
 
   function renderKPIs(){
-    const encaisse = allPaiements.reduce((s,p) => s + (p.data.montant||0), 0);
-    const reste = allColis.reduce((s,c) => s + c.reste, 0);
+    const encaisse = {GNF:0, USD:0}, reste = {GNF:0, USD:0};
+    allColis.forEach(c => { encaisse[c.devise] += c.paye; reste[c.devise] += c.reste; });
     const impaye = allColis.filter(c => c.statut !== 'paye').length;
-    document.getElementById('kpiEncaisse').textContent = fmtGNF(encaisse);
-    document.getElementById('kpiReste').textContent = fmtGNF(reste);
+    document.getElementById('kpiEncaisse').innerHTML = deuxDevises(encaisse);
+    document.getElementById('kpiReste').innerHTML = deuxDevises(reste);
     document.getElementById('kpiImpaye').textContent = impaye;
     document.getElementById('kpiTransactions').textContent = allPaiements.length;
     document.querySelectorAll('.kpi-value').forEach(el => el.classList.remove('skeleton'));
@@ -325,9 +358,9 @@
         </div>
         <div class="pc-dest">${[dest.prenom, dest.nom].filter(Boolean).join(' ') || 'Destinataire non renseigné'}</div>
         <div class="pc-amounts">
-          <div><span class="m-label">Total</span><span class="m-val">${fmtGNF(c.total)}</span></div>
-          <div><span class="m-label">Payé</span><span class="m-val pos">${fmtGNF(c.paye)}</span></div>
-          <div><span class="m-label">Reste</span><span class="m-val ${c.reste>0?'neg':''}">${fmtGNF(c.reste)}</span></div>
+          <div><span class="m-label">Total</span><span class="m-val">${fmtMontant(c.total, c.devise)}</span></div>
+          <div><span class="m-label">Payé</span><span class="m-val pos">${fmtMontant(c.paye, c.devise)}</span></div>
+          <div><span class="m-label">Reste</span><span class="m-val ${c.reste>0?'neg':''}">${fmtMontant(c.reste, c.devise)}</span></div>
         </div>
       `;
       card.addEventListener('click', () => openModal(c));
@@ -340,20 +373,22 @@
   function openModal(c){
     currentColisId = c.id;
     document.getElementById('modalTrack').textContent = c.data.numeroSuivi || c.id;
-    document.getElementById('modalTotal').textContent = fmtGNF(c.total);
-    document.getElementById('modalPaye').textContent = fmtGNF(c.paye);
-    document.getElementById('modalReste').textContent = fmtGNF(c.reste);
+    document.getElementById('modalTotal').textContent = fmtMontant(c.total, c.devise);
+    document.getElementById('modalPaye').textContent = fmtMontant(c.paye, c.devise);
+    document.getElementById('modalReste').textContent = fmtMontant(c.reste, c.devise);
+    document.getElementById('payMontantLabel').textContent = "Montant (" + c.devise + ") *";
+    document.getElementById('pay_montant').step = c.devise === 'USD' ? '0.01' : '1';
     document.getElementById('pay_montant').value = '';
     document.getElementById('pay_note').value = '';
     document.getElementById('payAlert').classList.remove('show');
-    renderHistory(c.id);
+    renderHistory(c);
     modalOverlay.classList.add('show');
   }
   document.getElementById('modalClose').addEventListener('click', () => modalOverlay.classList.remove('show'));
   modalOverlay.addEventListener('click', e => { if(e.target === modalOverlay) modalOverlay.classList.remove('show'); });
 
-  function renderHistory(colisId){
-    const items = allPaiements.filter(p => p.data.colisId === colisId)
+  function renderHistory(c){
+    const items = allPaiements.filter(p => p.data.colisId === c.id)
       .sort((a,b) => {
         const ta = a.data.date && a.data.date.toMillis ? a.data.date.toMillis() : 0;
         const tb = b.data.date && b.data.date.toMillis ? b.data.date.toMillis() : 0;
@@ -366,7 +401,7 @@
     }
     box.innerHTML = items.map(p => `
       <div class="hist-item">
-        <div><div class="m">${fmtGNF(p.data.montant)}</div><div class="d">${p.data.methode||''} ${p.data.notes?'· '+p.data.notes:''}</div></div>
+        <div><div class="m">${fmtMontant(montantDansDeviseColis(p.data, c.data), c.devise)}</div><div class="d">${p.data.methode||''} ${p.data.notes?'· '+p.data.notes:''}</div></div>
         <div class="d">${fmtDate(p.data.date)}</div>
       </div>
     `).join('');
@@ -385,7 +420,7 @@
     }
     const c = allColis.find(x => x.id === currentColisId);
     if(montant > c.reste + 0.01){
-      alertBox.textContent = "Ce montant dépasse le reste à payer (" + fmtGNF(c.reste) + "). Vérifie avant d'enregistrer.";
+      alertBox.textContent = "Ce montant dépasse le reste à payer (" + fmtMontant(c.reste, c.devise) + "). Vérifie avant d'enregistrer.";
       alertBox.classList.add('show');
       return;
     }
@@ -396,7 +431,7 @@
       await db.collection('paiements').add({
         colisId: currentColisId,
         numeroSuivi: c.data.numeroSuivi || currentColisId,
-        montant, methode, notes,
+        montant, devise: c.devise, methode, notes,
         date: firebase.firestore.FieldValue.serverTimestamp(),
         creePar: window._currentUser ? window._currentUser.uid : null
       });
