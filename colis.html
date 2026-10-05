@@ -197,7 +197,7 @@
         <option value="asc">Plus anciens</option>
       </select>
     </div>
-    <button class="rate-btn" id="rateOpenBtn" type="button">💱 Actualiser le taux maritime des colis en transit</button>
+    <button class="rate-btn" id="rateOpenBtn" type="button">💵 Passer en dollars les colis maritimes déjà émis</button>
   </div>
 
   <div class="list-head">
@@ -279,37 +279,33 @@
   </div>
 </div>
 
-<!-- MODAL ACTUALISATION DU TAUX MARITIME -->
-<div class="modal-overlay" id="rateOverlay">
+<!-- MODAL PASSAGE AU DOLLAR DES COLIS MARITIMES -->
+<div class="modal-overlay" id="convOverlay">
   <div class="modal">
     <div class="modal-head">
-      <span class="cc-track" style="font-size:16px;">💱 Taux maritime</span>
-      <button class="modal-close" id="rateClose" aria-label="Fermer">
+      <span class="cc-track" style="font-size:16px;">💵 Passage au dollar</span>
+      <button class="modal-close" id="convClose" aria-label="Fermer">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
     </div>
-    <div class="ec-note">Le tarif maritime est fixé en dollars (USD / CBM). Cet outil recalcule en GNF les frais de base des colis maritimes déjà enregistrés, avec le nouveau taux. Le rabais et les frais supplémentaires (déjà en GNF) ne changent pas. Le reçu de chaque colis affichera automatiquement le nouveau montant.</div>
+    <div class="ec-note">Les colis maritimes sont désormais facturés en dollars (USD par CBM). Cet outil reprend les colis maritimes encore enregistrés en francs et divise leurs montants — frais de base, rabais, frais supplémentaires et paiements déjà encaissés — par le taux qui avait servi à les créer. Les reçus afficheront ensuite des dollars. Un colis déjà converti n'est plus repris.</div>
 
     <div class="modal-section">
-      <div class="ec-grid">
-        <div class="ec-field"><label>Ancien taux (GNF pour 1 USD)</label><div class="ec-shell"><input type="number" id="rate_old" min="1"></div></div>
-        <div class="ec-field"><label>Nouveau taux (GNF pour 1 USD)</label><div class="ec-shell"><input type="number" id="rate_new" min="1"></div></div>
-      </div>
-      <div class="ec-hint" style="margin-top:0;">L'ancien taux sert pour les colis qui n'ont pas encore de taux enregistré. Les colis déjà actualisés utilisent leur propre taux.</div>
-      <label class="rate-check"><input type="checkbox" id="rate_saveDefault" checked> Enregistrer aussi ce nouveau taux comme taux par défaut (nouveaux colis)</label>
-      <label class="rate-check"><input type="checkbox" id="rate_inclAttente"> Inclure aussi les colis maritimes « En attente »</label>
-      <button class="ec-btn" id="ratePreviewBtn" style="margin-top:8px; background:var(--navy-900); color:#fff;">Voir les colis concernés</button>
+      <div class="ec-field"><label>Taux de référence (GNF pour 1 USD)</label><div class="ec-shell"><input type="number" id="conv_taux" min="1"></div></div>
+      <div class="ec-hint" style="margin-top:0;">Ce taux ne sert qu'aux colis qui n'ont pas gardé le leur. Les autres sont convertis avec le taux enregistré sur le colis.</div>
+      <label class="rate-check"><input type="checkbox" id="conv_inclLivres"> Inclure aussi les colis déjà livrés</label>
+      <button class="ec-btn" id="convPreviewBtn" style="margin-top:8px; background:var(--navy-900); color:#fff;">Voir les colis concernés</button>
     </div>
 
-    <div class="modal-section" id="rateListSection" style="display:none;">
-      <h4>Colis concernés <button class="ec-add" id="rateToggleAll">Tout cocher / décocher</button></h4>
-      <div id="rateList"></div>
-      <div class="ec-total" id="rateSummary" style="margin-top:10px;">—</div>
+    <div class="modal-section" id="convListSection" style="display:none;">
+      <h4>Colis à convertir <button class="ec-add" id="convToggleAll">Tout cocher / décocher</button></h4>
+      <div id="convList"></div>
+      <div class="ec-total" id="convSummary" style="margin-top:10px;">—</div>
     </div>
 
-    <div class="ec-alert" id="rateAlert"></div>
-    <button class="ec-btn" id="rateApplyBtn" style="display:none; background:var(--gold); color:var(--navy-950);">Appliquer le nouveau taux</button>
-    <button class="ec-ghost" id="rateCancelBtn" style="width:100%; margin-top:8px;">Fermer</button>
+    <div class="ec-alert" id="convAlert"></div>
+    <button class="ec-btn" id="convApplyBtn" style="display:none; background:var(--gold); color:var(--navy-950);">Convertir en dollars</button>
+    <button class="ec-ghost" id="convCancelBtn" style="width:100%; margin-top:8px;">Fermer</button>
   </div>
 </div>
 
@@ -371,9 +367,10 @@
 
     <div class="modal-section">
       <h4>Frais</h4>
+      <div class="ec-hint" id="ec_deviseNote" style="margin-top:0; margin-bottom:9px;"></div>
       <div class="ec-grid">
-        <div class="ec-field"><label>Frais de base (GNF)</label><div class="ec-shell"><input type="number" id="ec_base" min="0"></div></div>
-        <div class="ec-field"><label>Rabais (GNF)</label><div class="ec-shell"><input type="number" id="ec_rabais" min="0"></div></div>
+        <div class="ec-field"><label id="ec_baseLabel">Frais de base (GNF)</label><div class="ec-shell"><input type="number" id="ec_base" min="0" step="0.01"></div></div>
+        <div class="ec-field"><label id="ec_rabaisLabel">Rabais (GNF)</label><div class="ec-shell"><input type="number" id="ec_rabais" min="0" step="0.01"></div></div>
       </div>
       <div id="ec_extras"></div>
       <button class="ec-add" id="ec_addExtra" style="margin-top:8px;">+ Ajouter un frais</button>
@@ -408,6 +405,12 @@
   const db = firebase.firestore();
 
   const fmtGNF = n => new Intl.NumberFormat('fr-FR').format(Math.round(n||0)) + " GNF";
+  const fmtUSD = n => new Intl.NumberFormat('fr-FR', {maximumFractionDigits:2}).format(n||0) + " USD";
+  // Devise de facturation : le maritime est facturé en dollars, l'aérien en francs.
+  // Les colis créés avant le passage au dollar n'ont pas de champ devise : ils sont en francs
+  // tant qu'ils n'ont pas été convertis par l'outil de la page.
+  const deviseDe = c => (c && (c.devise || (c.frais && c.frais.devise))) || 'GNF';
+  const fmtMontant = (n, dev) => dev === 'USD' ? fmtUSD(n) : fmtGNF(n);
   const statusLabel = c => ({en_attente:'En attente', en_transit:'En transit', livre:'Livré'}[c] || c);
   const fmtDate = ts => {
     if(!ts) return '—';
@@ -543,7 +546,7 @@
         <div class="cc-route">${route.depart || 'GUINEE'} → ${route.arrivee || '—'}</div>
         <div class="cc-meta">
           <div><span class="m-label">${data.mode === 'maritime' ? 'Volume' : 'Poids'}</span><span class="m-val">${data.mode === 'maritime' ? (data.volumeTotal||0).toFixed(3) + ' CBM' : (data.poidsTotal||0).toFixed(1) + ' kg'}</span></div>
-          <div><span class="m-label">Frais</span><span class="m-val">${fmtGNF(data.frais ? data.frais.total : 0)}</span></div>
+          <div><span class="m-label">Frais</span><span class="m-val">${fmtMontant(data.frais ? data.frais.total : 0, deviseDe(data))}</span></div>
           <div><span class="m-label">Date</span><span class="m-val">${fmtDate(data.dateCreation)}</span></div>
         </div>
       `;
@@ -619,10 +622,17 @@
       return `<div class="modal-line"><span>x${p.quantite} ${p.nom}</span><span>${mesure}</span></div>${noteTarif}`;
     }).join('') || '<div class="modal-line"><span>Aucun produit</span></div>';
     const frais = data.frais || {};
+    const dev = deviseDe(data);
+    const tauxAffiche = Number(data.tauxChange || frais.tauxChangeGNFUSD || ecTauxUSD) || 0;
+    const extrasLignes = (frais.extras || []).map(x =>
+      `<div class="modal-line"><span>${x.label || 'Frais'}</span><span>${fmtMontant(x.montant, dev)}</span></div>`).join('');
     document.getElementById('modalFees').innerHTML = `
-      <div class="modal-line"><span>Frais de base</span><span>${fmtGNF(frais.fraisBase)}</span></div>
-      <div class="modal-line"><span>Rabais</span><span>-${fmtGNF(frais.rabais)}</span></div>
-      <div class="modal-line"><span><strong>Total</strong></span><span><strong>${fmtGNF(frais.total)}</strong></span></div>
+      <div class="modal-line"><span>Frais de base</span><span>${fmtMontant(frais.fraisBase, dev)}</span></div>
+      <div class="modal-line"><span>Rabais</span><span>-${fmtMontant(frais.rabais, dev)}</span></div>
+      ${extrasLignes}
+      <div class="modal-line"><span><strong>Total</strong></span><span><strong>${fmtMontant(frais.total, dev)}</strong></span></div>
+      ${dev === 'USD' && tauxAffiche ? `<div class="modal-line" style="font-size:12px; color:var(--slate-light);"><span>Soit, au taux de ${new Intl.NumberFormat('fr-FR').format(tauxAffiche)}</span><span>${fmtGNF((Number(frais.total)||0)*tauxAffiche)}</span></div>` : ''}
+      ${dev !== 'USD' && data.mode === 'maritime' ? `<div class="modal-line" style="font-size:12px; color:var(--gold);"><span>Encore enregistré en francs</span><span>à convertir en dollars</span></div>` : ''}
     `;
     modalOverlay.classList.add('show');
   }
@@ -684,6 +694,17 @@
   // =====================================================================
   const escAttr = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const ecEl = id => document.getElementById(id);
+
+  // Devise de l'éditeur : elle suit la voie choisie dans le formulaire.
+  const ecDevise = () => ecEl('ec_mode').value === 'maritime' ? 'USD' : 'GNF';
+  const ecFmt = n => fmtMontant(n, ecDevise());
+  function applyEcDeviseLabels(){
+    const usd = ecDevise() === 'USD';
+    ecEl('ec_baseLabel').textContent  = usd ? "Frais de base (USD)" : "Frais de base (GNF)";
+    ecEl('ec_rabaisLabel').textContent = usd ? "Rabais (USD)" : "Rabais (GNF)";
+    ecEl('ec_base').step   = usd ? '0.01' : '1';
+    ecEl('ec_rabais').step = usd ? '0.01' : '1';
+  }
 
   let ecDocId = null, ecData = null, ecProducts = [], ecExtras = [];
   let ecTauxUSD = 9345, ecTarifCBM_USD = 370, ecCodeHash = null, ecCodeOk = false;
@@ -790,12 +811,24 @@
       tarifPersonnalise: p.tarifPersonnalise || {actif:false}
     }));
     const f = c.frais || {};
-    ecExtras = (f.extras || []).map(x => ({label:x.label||'', montant:Number(x.montant)||0}));
-    ecEl('ec_base').value = Number(f.fraisBase)||0;
-    ecEl('ec_rabais').value = Number(f.rabais)||0;
+    // Un colis maritime encore enregistré en francs est affiché converti en dollars,
+    // au taux qui avait servi à le créer. L'enregistrement le fixe alors en dollars.
+    const ancienEnGNF = c.mode !== 'aerien' && deviseDe(c) !== 'USD';
+    const tauxOrigine = Number(c.tauxChange || f.tauxChangeGNFUSD || ecTauxUSD) || 1;
+    const versDevise = n => ancienEnGNF
+      ? Math.round(((Number(n)||0)/tauxOrigine)*100)/100
+      : (Number(n)||0);
+    ecExtras = (f.extras || []).map(x => ({label:x.label||'', montant:versDevise(x.montant)}));
+    ecEl('ec_base').value = versDevise(f.fraisBase);
+    ecEl('ec_rabais').value = versDevise(f.rabais);
+    ecEl('ec_deviseNote').textContent = ancienEnGNF
+      ? "Ce colis était enregistré en francs : les montants sont affichés convertis en dollars au taux de "
+        + new Intl.NumberFormat('fr-FR').format(tauxOrigine) + ". L'enregistrement le fixera en dollars."
+      : "";
 
     renderEcProducts();
     renderEcExtras();
+    applyEcDeviseLabels();
     ecAlert('ec_saveAlert', '');
   }
 
@@ -843,7 +876,8 @@
           p.hauteur  = Number(q('.ep-haut').value)||0;
           p.tarifCBM_USD = Number(q('.ep-tarif').value)||0;
           const vol = ecVolume(p);
-          q('.ep-sub').textContent = vol.toFixed(3) + " CBM · " + fmtGNF(vol*p.tarifCBM_USD*ecTauxUSD);
+          q('.ep-sub').textContent = vol.toFixed(3) + " CBM · " + fmtUSD(vol*p.tarifCBM_USD)
+            + " (" + fmtGNF(vol*p.tarifCBM_USD*ecTauxUSD) + ")";
         }else{
           p.poidsUnitaire = Number(q('.ep-poids').value)||0;
           q('.ep-sub').textContent = (p.quantite*p.poidsUnitaire).toFixed(1) + " kg";
@@ -864,7 +898,12 @@
       longueur:0, largeur:0, hauteur:0, categorie:'', tarifCBM_USD:ecTarifCBM_USD, tarifPersonnalise:{actif:false}});
     renderEcProducts();
   });
-  ecEl('ec_mode').addEventListener('change', renderEcProducts);
+  ecEl('ec_mode').addEventListener('change', () => {
+    renderEcProducts();
+    applyEcDeviseLabels();
+    updateEcTotals();
+    ecAlert('ec_saveAlert', "Changer de voie change la devise des frais (maritime en dollars, aérien en francs) : revois les montants avant d'enregistrer.");
+  });
 
   function renderEcExtras(){
     const wrap = ecEl('ec_extras');
@@ -874,7 +913,7 @@
       row.className = 'ec-extra';
       row.innerHTML = `
         <div class="ec-shell"><input type="text" class="ex-label" placeholder="Intitulé" value="${escAttr(x.label)}"></div>
-        <div class="ec-shell"><input type="number" class="ex-montant" min="0" value="${x.montant}"></div>
+        <div class="ec-shell"><input type="number" class="ex-montant" min="0" step="0.01" value="${x.montant}"></div>
         <button class="ec-del" data-delx="${i}" title="Supprimer">🗑️</button>`;
       row.querySelector('.ex-label').addEventListener('input', e => { x.label = e.target.value; });
       row.querySelector('.ex-montant').addEventListener('input', e => { x.montant = Number(e.target.value)||0; updateEcTotals(); });
@@ -887,7 +926,8 @@
   // En aérien le tarif dépend des catégories : pas de recalcul automatique
   function ecComputeBase(){
     if(ecEl('ec_mode').value !== 'maritime') return null;
-    return ecProducts.reduce((s,p) => s + ecVolume(p)*(p.tarifCBM_USD||0)*ecTauxUSD, 0);
+    // Résultat en dollars : c'est la devise de facturation du maritime.
+    return ecProducts.reduce((s,p) => s + ecVolume(p)*(p.tarifCBM_USD||0), 0);
   }
 
   function updateEcTotals(){
@@ -900,20 +940,22 @@
     const base = Number(ecEl('ec_base').value)||0;
     const rabais = Number(ecEl('ec_rabais').value)||0;
     const extras = ecExtras.reduce((s,x) => s + x.montant, 0);
-    ecEl('ec_totalLine').textContent = "Total : " + fmtGNF(base - rabais + extras);
+    const total = base - rabais + extras;
+    ecEl('ec_totalLine').textContent = "Total : " + ecFmt(total)
+      + (maritime ? "  (" + fmtGNF(total*ecTauxUSD) + " au taux du jour)" : "");
 
     const calc = ecComputeBase();
     ecEl('ec_baseHint').textContent = calc == null
       ? "Voie aérienne : les frais dépendent des catégories, saisis-les à la main."
-      : "Calcul depuis les produits : " + fmtGNF(calc)
-        + (Math.abs(calc - base) > 1 ? " — différent des frais saisis." : " — conforme aux frais saisis.");
+      : "Calcul depuis les produits : " + fmtUSD(calc)
+        + (Math.abs(calc - base) > 0.01 ? " — différent des frais saisis." : " — conforme aux frais saisis.");
   }
   ['ec_base','ec_rabais'].forEach(id => ecEl(id).addEventListener('input', updateEcTotals));
 
   ecEl('ec_recalc').addEventListener('click', () => {
     const calc = ecComputeBase();
     if(calc == null){ ecAlert('ec_saveAlert', "Recalcul possible seulement en maritime."); return; }
-    ecEl('ec_base').value = Math.round(calc);
+    ecEl('ec_base').value = Math.round(calc*100)/100;
     updateEcTotals();
   });
 
@@ -957,7 +999,8 @@
             volume: vol,
             tarifCBM_USD: maritime ? (p.tarifCBM_USD||0) : null,
             fraisLigneUSD: maritime ? vol*(p.tarifCBM_USD||0) : null,
-            fraisLigne: maritime ? vol*(p.tarifCBM_USD||0)*ecTauxUSD : null,
+            // fraisLigne est dans la devise du colis : dollars en maritime
+            fraisLigne: maritime ? vol*(p.tarifCBM_USD||0) : null,
             tarifPersonnalise: (maritime && perso)
               ? { actif:true, categorie:p.categorie.trim(), montantUSD:p.tarifCBM_USD||0, mode:'cbm_usd' }
               : { actif:false }
@@ -966,6 +1009,10 @@
         poidsTotal: ecProducts.reduce((s,p)=>s+p.quantite*p.poidsUnitaire,0),
         volumeTotal: ecProducts.reduce((s,p)=>s+ecVolume(p),0),
         valeurTotal: ecProducts.reduce((s,p)=>s+p.quantite*p.valeurUnitaire,0),
+        // Devise de facturation : les montants ci-dessous sont dans cette devise
+        devise: maritime ? 'USD' : 'GNF',
+        'frais.devise': maritime ? 'USD' : 'GNF',
+        'frais.tauxChangeGNFUSD': ecTauxUSD,
         'frais.fraisBase': base,
         'frais.rabais': rabais,
         'frais.extras': extras.map(x => ({label:x.label.trim(), montant:x.montant})),
@@ -989,27 +1036,30 @@
 
 
   // =====================================================================
-  // ACTUALISATION DU TAUX MARITIME — DGA seulement, après saisie du code
-  // Base USD conservée : nouveaux frais de base = anciens frais × (nouveau taux / ancien taux)
+  // PASSAGE AU DOLLAR DES COLIS MARITIMES DÉJÀ ÉMIS — DGA seulement,
+  // après saisie du code. Les montants en francs sont divisés par le taux
+  // du colis ; ses paiements déjà encaissés sont convertis en même temps,
+  // sinon le reste à payer serait faux.
   // =====================================================================
-  const rateOverlay = ecEl('rateOverlay');
-  let rateItems = []; // {id, data, r0, oldBase, newBase, oldTotal, newTotal, paye, checked}
+  const convOverlay = ecEl('convOverlay');
+  let convItems = []; // {id, data, taux, oldTotal, base, rabais, extras, total, paiements, checked}
 
-  function openRateTool(){
-    ecEl('rate_old').value = ecTauxUSD;
-    ecEl('rate_new').value = '';
-    ecEl('rateListSection').style.display = 'none';
-    ecEl('rateApplyBtn').style.display = 'none';
-    ecAlert('rateAlert', '');
-    rateItems = [];
-    rateOverlay.classList.add('show');
-    setTimeout(() => ecEl('rate_new').focus(), 100);
+  const round2 = n => Math.round((Number(n)||0) * 100) / 100;
+
+  function openConvTool(){
+    ecEl('conv_taux').value = ecTauxUSD;
+    ecEl('convListSection').style.display = 'none';
+    ecEl('convApplyBtn').style.display = 'none';
+    ecAlert('convAlert', '');
+    convItems = [];
+    convOverlay.classList.add('show');
+    setTimeout(() => ecEl('conv_taux').focus(), 100);
   }
 
   ecEl('rateOpenBtn').addEventListener('click', () => {
     if(!userProfile.isDga){ alert("Réservé au DGA."); return; }
-    ecAfterCode = openRateTool;
-    if(ecCodeOk){ openRateTool(); return; }
+    ecAfterCode = openConvTool;
+    if(ecCodeOk){ openConvTool(); return; }
     if(!ecCodeHash){
       alert("Aucun code de modification n'est défini. Va dans Configuration › Routes & Tarifs pour en créer un.");
       return;
@@ -1019,150 +1069,168 @@
     codeOverlay.classList.add('show');
     setTimeout(() => ecEl('codePrompt').focus(), 100);
   });
-  const closeRate = () => rateOverlay.classList.remove('show');
-  ecEl('rateClose').addEventListener('click', closeRate);
-  ecEl('rateCancelBtn').addEventListener('click', closeRate);
-  rateOverlay.addEventListener('click', e => { if(e.target === rateOverlay) closeRate(); });
+  const closeConv = () => convOverlay.classList.remove('show');
+  ecEl('convClose').addEventListener('click', closeConv);
+  ecEl('convCancelBtn').addEventListener('click', closeConv);
+  convOverlay.addEventListener('click', e => { if(e.target === convOverlay) closeConv(); });
 
-  // Taux déjà mémorisé sur le colis (après une première actualisation), sinon l'ancien taux saisi
-  function tauxDuColis(c, fallback){
-    const t = Number(c.tauxChange || (c.frais && c.frais.tauxChange) || 0);
-    return t > 0 ? t : fallback;
+  // Taux retenu pour un colis : celui qu'il a gardé, sinon celui saisi dans l'outil
+  function tauxDuColis(c, secours){
+    const t = Number(c.tauxChange || (c.frais && c.frais.tauxChangeGNFUSD) || 0);
+    return t > 0 ? t : secours;
   }
 
-  async function sommePaiements(ids){
-    const tot = {};
+  // Paiements encore libellés en francs, regroupés par colis
+  async function paiementsEnFrancs(ids){
+    const parColis = {};
     for(let i = 0; i < ids.length; i += 10){
-      const part = ids.slice(i, i + 10);
-      const snap = await db.collection('paiements').where('colisId', 'in', part).get();
+      const snap = await db.collection('paiements').where('colisId', 'in', ids.slice(i, i + 10)).get();
       snap.forEach(d => {
-        const p = d.data();
-        tot[p.colisId] = (tot[p.colisId] || 0) + (Number(p.montant) || 0);
+        const pay = d.data();
+        if(pay.devise === 'USD') return; // déjà converti
+        (parColis[pay.colisId] = parColis[pay.colisId] || []).push({id:d.id, montant:Number(pay.montant)||0});
       });
     }
-    return tot;
+    return parColis;
   }
 
-  ecEl('ratePreviewBtn').addEventListener('click', async () => {
-    ecAlert('rateAlert', '');
-    const r0def = Number(ecEl('rate_old').value) || 0;
-    const r1 = Number(ecEl('rate_new').value) || 0;
-    if(r0def <= 0 || r1 <= 0){ ecAlert('rateAlert', "Saisis l'ancien et le nouveau taux."); return; }
-    const statuts = ecEl('rate_inclAttente').checked ? ['en_transit','en_attente'] : ['en_transit'];
+  ecEl('convPreviewBtn').addEventListener('click', async () => {
+    ecAlert('convAlert', '');
+    const tauxSecours = Number(ecEl('conv_taux').value) || 0;
+    if(tauxSecours <= 0){ ecAlert('convAlert', "Saisis le taux de référence."); return; }
+    const inclLivres = ecEl('conv_inclLivres').checked;
 
-    const cibles = allDocs.filter(({data}) => data.mode === 'maritime' && statuts.includes(data.statut) && canManageColis(data));
-    const btn = ecEl('ratePreviewBtn'); btn.disabled = true; btn.textContent = "Chargement…";
-    let payes = {};
-    try{ payes = await sommePaiements(cibles.map(x => x.id)); }
+    const cibles = allDocs.filter(({data}) =>
+      data.mode === 'maritime'
+      && deviseDe(data) !== 'USD'
+      && (inclLivres || data.statut !== 'livre')
+      && canManageColis(data));
+
+    const btn = ecEl('convPreviewBtn'); btn.disabled = true; btn.textContent = "Chargement…";
+    let paiements = {};
+    try{ if(cibles.length) paiements = await paiementsEnFrancs(cibles.map(x => x.id)); }
     catch(e){ console.warn("Paiements illisibles", e); }
     btn.disabled = false; btn.textContent = "Voir les colis concernés";
 
-    rateItems = cibles.map(({id, data}) => {
+    convItems = cibles.map(({id, data}) => {
       const f = data.frais || {};
-      const r0 = tauxDuColis(data, r0def);
-      const oldBase = Number(f.fraisBase) || 0;
-      const newBase = Math.round(oldBase * r1 / r0);
-      const oldTotal = Number(f.total) || 0;
-      const newTotal = oldTotal - oldBase + newBase;
-      const paye = payes[id] || 0;
-      const solde = oldTotal > 0 && paye >= oldTotal;
-      return { id, data, r0, oldBase, newBase, oldTotal, newTotal, paye, solde,
-               checked: !solde && r0 !== r1 && oldBase > 0 };
+      const taux = tauxDuColis(data, tauxSecours);
+      const base = round2((Number(f.fraisBase)||0) / taux);
+      const rabais = round2((Number(f.rabais)||0) / taux);
+      const extras = (f.extras || []).map(x => ({label:x.label||'', montant: round2((Number(x.montant)||0) / taux)}));
+      const total = round2(base - rabais + extras.reduce((s,x) => s + x.montant, 0));
+      return { id, data, taux, oldTotal:Number(f.total)||0, base, rabais, extras, total,
+               paiements: paiements[id] || [], checked:true };
     });
-    renderRateList();
+    renderConvList();
   });
 
-  function renderRateList(){
-    ecEl('rateListSection').style.display = 'block';
-    const list = ecEl('rateList');
-    if(!rateItems.length){
-      list.innerHTML = '<div class="ec-hint">Aucun colis maritime concerné.</div>';
-      ecEl('rateSummary').textContent = '—';
-      ecEl('rateApplyBtn').style.display = 'none';
+  function renderConvList(){
+    ecEl('convListSection').style.display = 'block';
+    const list = ecEl('convList');
+    if(!convItems.length){
+      list.innerHTML = '<div class="ec-hint">Aucun colis à convertir : les colis maritimes concernés sont déjà en dollars.</div>';
+      ecEl('convSummary').textContent = '—';
+      ecEl('convApplyBtn').style.display = 'none';
       return;
     }
     list.innerHTML = '';
-    rateItems.forEach((it, i) => {
+    convItems.forEach((it, i) => {
       const dest = it.data.destinataire || {};
       const row = document.createElement('label');
       row.className = 'rate-row';
-      const reste = it.newTotal - it.paye;
       row.innerHTML = `
         <input type="checkbox" ${it.checked ? 'checked' : ''}>
         <div>
-          <div class="rn">${escAttr(it.data.numeroSuivi || it.id)}${it.solde ? '<span class="tag">Soldé</span>' : ''}</div>
-          <div class="rs">${escAttr([dest.prenom, dest.nom].filter(Boolean).join(' ') || '—')} · ${(it.data.volumeTotal||0).toFixed(3)} CBM · taux ${new Intl.NumberFormat('fr-FR').format(it.r0)}</div>
-          ${it.paye ? `<div class="rs">Déjà payé : ${fmtGNF(it.paye)} · reste après actualisation : ${fmtGNF(reste)}</div>` : ''}
+          <div class="rn">${escAttr(it.data.numeroSuivi || it.id)}</div>
+          <div class="rs">${escAttr([dest.prenom, dest.nom].filter(Boolean).join(' ') || '—')} · ${(it.data.volumeTotal||0).toFixed(3)} CBM · taux ${new Intl.NumberFormat('fr-FR').format(it.taux)}</div>
+          ${it.paiements.length ? `<div class="rs">${it.paiements.length} paiement(s) converti(s) en même temps</div>` : ''}
         </div>
-        <div class="ra"><div class="old">${fmtGNF(it.oldTotal)}</div><div class="new">${fmtGNF(it.newTotal)}</div></div>`;
-      row.querySelector('input').addEventListener('change', e => { rateItems[i].checked = e.target.checked; updateRateSummary(); });
+        <div class="ra"><div class="old">${fmtGNF(it.oldTotal)}</div><div class="new">${fmtUSD(it.total)}</div></div>`;
+      row.querySelector('input').addEventListener('change', e => { convItems[i].checked = e.target.checked; updateConvSummary(); });
       list.appendChild(row);
     });
-    updateRateSummary();
+    updateConvSummary();
   }
 
-  function updateRateSummary(){
-    const sel = rateItems.filter(x => x.checked);
-    const diff = sel.reduce((s,x) => s + (x.newTotal - x.oldTotal), 0);
-    ecEl('rateSummary').textContent = sel.length + " colis sélectionné(s) · écart total : "
-      + (diff >= 0 ? '+' : '') + fmtGNF(diff);
-    ecEl('rateApplyBtn').style.display = sel.length ? 'block' : 'none';
+  function updateConvSummary(){
+    const sel = convItems.filter(x => x.checked);
+    ecEl('convSummary').textContent = sel.length + " colis sélectionné(s) · "
+      + fmtUSD(sel.reduce((s,x) => s + x.total, 0)) + " au total";
+    ecEl('convApplyBtn').style.display = sel.length ? 'block' : 'none';
   }
 
-  ecEl('rateToggleAll').addEventListener('click', () => {
-    const tous = rateItems.every(x => x.checked);
-    rateItems.forEach(x => x.checked = !tous);
-    renderRateList();
+  ecEl('convToggleAll').addEventListener('click', () => {
+    const tous = convItems.every(x => x.checked);
+    convItems.forEach(x => x.checked = !tous);
+    renderConvList();
   });
 
-  ecEl('rateApplyBtn').addEventListener('click', async () => {
-    const r1 = Number(ecEl('rate_new').value) || 0;
-    const sel = rateItems.filter(x => x.checked);
-    if(!sel.length || r1 <= 0) return;
-    if(!confirm("Appliquer le taux de " + new Intl.NumberFormat('fr-FR').format(r1) + " GNF / USD à " + sel.length + " colis ?\n\nLes reçus de ces colis afficheront le nouveau montant.")) return;
+  ecEl('convApplyBtn').addEventListener('click', async () => {
+    const sel = convItems.filter(x => x.checked);
+    if(!sel.length) return;
+    if(!confirm("Convertir " + sel.length + " colis maritime(s) en dollars ?\n\nLeurs reçus afficheront désormais des montants en dollars. Un colis converti n'est plus repris par cet outil.")) return;
 
-    const btn = ecEl('rateApplyBtn'); btn.disabled = true; btn.textContent = "Application…";
+    const btn = ecEl('convApplyBtn'); btn.disabled = true; btn.textContent = "Conversion…";
     const par = auth.currentUser ? auth.currentUser.email : null;
     try{
-      for(let i = 0; i < sel.length; i += 400){
-        const batch = db.batch();
-        sel.slice(i, i + 400).forEach(it => {
-          const produits = (it.data.produits || []).map(p => {
-            const q = Object.assign({}, p);
-            if(q.fraisLigneUSD != null) q.fraisLigne = Number(q.fraisLigneUSD) * r1;
-            else if(q.fraisLigne != null) q.fraisLigne = Number(q.fraisLigne) * r1 / it.r0;
-            return q;
-          });
-          batch.update(db.collection('colis').doc(it.id), {
-            'frais.fraisBase': it.newBase,
-            'frais.total': it.newTotal,
-            produits,
-            tauxChange: r1,
-            majTaux: { date: firebase.firestore.FieldValue.serverTimestamp(), par, ancienTaux: it.r0, nouveauTaux: r1 },
-            historiqueTaux: firebase.firestore.FieldValue.arrayUnion({
-              date: new Date().toISOString(), par,
-              ancienTaux: it.r0, nouveauTaux: r1,
-              ancienTotal: it.oldTotal, nouveauTotal: it.newTotal
-            })
-          });
+      let batch = db.batch(), ops = 0;
+      for(const it of sel){
+        const produits = (it.data.produits || []).map(p => {
+          const q = Object.assign({}, p);
+          const vol = Number(q.volume) || 0;
+          const tarif = Number(q.tarifCBM_USD != null
+            ? q.tarifCBM_USD
+            : (q.tarifPersonnalise && q.tarifPersonnalise.montantUSD)) || 0;
+          // On repart du montant en dollars quand il existe, sinon on divise par le taux
+          q.fraisLigneUSD = q.fraisLigneUSD != null ? round2(q.fraisLigneUSD)
+            : (vol && tarif ? round2(vol*tarif) : round2((Number(q.fraisLigne)||0) / it.taux));
+          q.fraisLigne = q.fraisLigneUSD;
+          return q;
         });
-        await batch.commit();
+        batch.update(db.collection('colis').doc(it.id), {
+          devise: 'USD',
+          produits,
+          'frais.devise': 'USD',
+          'frais.fraisBase': it.base,
+          'frais.rabais': it.rabais,
+          'frais.extras': it.extras,
+          'frais.total': it.total,
+          'frais.tauxChangeGNFUSD': it.taux,
+          tauxChange: it.taux,
+          conversionDevise: {
+            date: firebase.firestore.FieldValue.serverTimestamp(), par,
+            ancienneDevise: 'GNF', taux: it.taux,
+            ancienTotal: it.oldTotal, nouveauTotal: it.total
+          }
+        });
+        ops++;
+        it.paiements.forEach(pay => {
+          batch.update(db.collection('paiements').doc(pay.id), {
+            devise: 'USD',
+            montant: round2(pay.montant / it.taux),
+            montantGNF: pay.montant,
+            tauxConversion: it.taux
+          });
+          ops++;
+        });
+        // On ne coupe qu'entre deux colis : un colis et ses paiements partent ensemble
+        if(ops >= 400){ await batch.commit(); batch = db.batch(); ops = 0; }
       }
-      if(ecEl('rate_saveDefault').checked){
-        await db.collection('config').doc('general').set({ tauxChangeGNFUSD: r1 }, { merge: true });
-        ecTauxUSD = r1;
-      }
-      ecAlert('rateAlert', sel.length + " colis actualisé(s) au taux de " + new Intl.NumberFormat('fr-FR').format(r1) + " GNF / USD. Pense à prévenir les clients concernés.", true);
-      ecEl('rateApplyBtn').style.display = 'none';
-      ecEl('rateListSection').style.display = 'none';
+      if(ops) await batch.commit();
+
+      ecAlert('convAlert', sel.length + " colis converti(s) en dollars. Les reçus concernés affichent maintenant des montants en USD.", true);
+      ecEl('convApplyBtn').style.display = 'none';
+      ecEl('convListSection').style.display = 'none';
       loadColis();
     }catch(e){
       console.error(e);
-      ecAlert('rateAlert', "Échec de l'actualisation. Vérifie ta connexion et réessaie.");
+      ecAlert('convAlert', "Échec de la conversion. Vérifie ta connexion et réessaie.");
     }finally{
-      btn.disabled = false; btn.textContent = "Appliquer le nouveau taux";
+      btn.disabled = false; btn.textContent = "Convertir en dollars";
     }
   });
+
 
 </script>
 
