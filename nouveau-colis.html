@@ -63,10 +63,26 @@
   .mode-btn svg{flex:none;}
   .mode-btn.active{border-color:var(--navy-700); background:#eaf0fb; color:var(--navy-900);}
 
+  /* Barre d'étapes : une couleur par étape.
+     L'étape faite ou en cours s'affiche en couleur pleine, les étapes à venir
+     gardent la même couleur en version pâle — on voit donc les cinq couleurs
+     du début à la fin de la saisie. */
   .progress{display:flex; gap:6px; margin-bottom:4px;}
-  .progress span{flex:1; height:5px; border-radius:3px; background:var(--line);}
-  .progress span.done{background:var(--navy-700);}
-  .progress span.current{background:var(--gold);}
+  .progress span{
+    flex:1; height:5px; border-radius:3px;
+    background:var(--step-color); opacity:.20;
+    transition:opacity .25s ease, transform .25s ease, box-shadow .25s ease;
+  }
+  .progress span:nth-child(1){--step-color:#2b5fb0;} /* 1 · Expéditeur   — bleu    */
+  .progress span:nth-child(2){--step-color:#1e7a46;} /* 2 · Destinataire — vert    */
+  .progress span:nth-child(3){--step-color:#c99a3c;} /* 3 · Produits     — or      */
+  .progress span:nth-child(4){--step-color:#d2622f;} /* 4 · Frais        — orange  */
+  .progress span:nth-child(5){--step-color:#7a4fa3;} /* 5 · Résumé       — violet  */
+  .progress span.done{opacity:1;}
+  .progress span.current{
+    opacity:1; transform:scaleY(1.6);
+    box-shadow:0 2px 9px -2px var(--step-color);
+  }
 
   .step-head{display:flex; align-items:center; gap:12px; margin:16px 0 16px;}
   .step-num{
@@ -450,7 +466,7 @@
   const LOGIN_URL = "connexion.html";
 
   // Taux par défaut si aucun taux n'est défini dans Configuration > Routes & Tarifs
-  let GNF_PER_USD = 9345;
+  let GNF_PER_USD = 10000;
   // Tarif maritime : la référence est le montant en dollars par CBM, comme dans
   // Configuration > Routes & Tarifs (config/general.tarifCBM_USD). L'équivalent
   // en francs est recalculé à chaque changement de taux.
@@ -686,14 +702,29 @@
   db.collection('config').doc('general').get().then(doc => {
     if(!doc.exists) return;
     const c = doc.data();
-    if(c.tauxChangeGNFUSD) GNF_PER_USD = Number(c.tauxChangeGNFUSD);
-    // Le tarif de référence est en dollars ; on accepte encore l'ancien champ
-    // en francs pour les configurations qui n'ont pas été migrées.
-    if(c.tarifCBM_USD) TARIF_CBM_USD = Number(c.tarifCBM_USD);
-    else if(c.tarifCBM_GNF) TARIF_CBM_USD = Number(c.tarifCBM_GNF)/GNF_PER_USD;
+    const taux = Number(c.tauxChangeGNFUSD);
+    if(Number.isFinite(taux) && taux > 0) GNF_PER_USD = taux;
+
+    // Le tarif de référence est en DOLLARS par CBM (config/general.tarifCBM_USD).
+    // L'ancien champ en francs n'est utilisé qu'en dernier recours, quand la
+    // configuration n'a jamais été migrée : converti par un taux périmé, il
+    // donne des tarifs bancals (ex. 346,39 USD au lieu de 370).
+    const tarifUSD = Number(c.tarifCBM_USD);
+    if(Number.isFinite(tarifUSD) && tarifUSD > 0){
+      TARIF_CBM_USD = tarifUSD;
+    }else{
+      const tarifGNF = Number(c.tarifCBM_GNF);
+      if(Number.isFinite(tarifGNF) && tarifGNF > 0){
+        TARIF_CBM_USD = Math.round((tarifGNF / GNF_PER_USD) * 100) / 100;
+        console.warn("config/general.tarifCBM_USD absent : tarif maritime déduit de l'ancien champ en francs ("
+          + tarifGNF + " GNF ÷ " + GNF_PER_USD + " = " + TARIF_CBM_USD
+          + " USD/CBM). Renseigne le tarif en dollars dans Configuration > Routes & Tarifs.");
+      }
+    }
     TARIF_CBM = TARIF_CBM_USD * GNF_PER_USD;
     renderProducts();
     updateFees();
+    applyDeviseLabels();
   }).catch(() => { /* on garde le taux et le tarif par défaut */ });
 
   // ---------------- CATEGORIES (Firestore) ----------------
@@ -961,7 +992,9 @@
     set('rabaisLabel', usd ? "Rabais appliqué (USD)" : "Rabais appliqué (GNF)");
     set('paiementLabel', usd ? "Montant payé maintenant (USD)" : "Montant payé maintenant (GNF)");
     set('deviseNote', usd
-      ? "Colis maritime facturé en dollars — l'équivalent en francs est indicatif, au taux du jour."
+      ? "Tarif maritime appliqué : " + fmtUSDplain(TARIF_CBM_USD) + " / CBM · 1 USD = "
+        + new Intl.NumberFormat('fr-FR').format(GNF_PER_USD)
+        + " GNF — l'équivalent en francs est indicatif."
       : "Montants en GNF (devise d'opération) — conversion USD affichée à titre indicatif");
   }
   updateFees();
