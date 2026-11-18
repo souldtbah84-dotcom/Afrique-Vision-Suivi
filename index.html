@@ -345,6 +345,7 @@ const DEMO = {
 const STEPS = [
   { key: "en_attente", title: "Colis enregistré" },
   { key: "en_transit", title: "En transit" },
+  { key: "arrive",     title: "Arrivé au bureau" },
   { key: "livre",      title: "Livré" }
 ];
 const STEP_ORDER = STEPS.map(s => s.key);
@@ -384,6 +385,7 @@ function renderStamp(statut){
   const el = document.getElementById("rStamp");
   el.classList.remove("show","ok","gold");
   if (statut === "livre") { el.textContent = "LIVRÉ"; el.classList.add("ok"); }
+  else if (statut === "arrive") { el.textContent = "ARRIVÉ À RETIRER"; el.classList.add("gold"); }
   else if (statut === "en_transit") { el.textContent = "EN TRANSIT"; el.classList.add("gold"); }
   else { el.textContent = "ENREGISTRÉ"; el.classList.add("gold"); }
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("show")));
