@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Africa Vision · Avis d'arrivée</title>
+<link rel="manifest" href="manifest-admin.json">
+<meta name="theme-color" content="#0f2142">
+<link rel="apple-touch-icon" href="icon-192-interne.png">
+<link rel="icon" href="icon-192-interne.png">
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --navy-950:#0a1830; --navy-900:#0f2142; --navy-800:#16305c; --navy-700:#1e3f78;
+    --cream:#f6f1e6; --paper:#fffdf8; --gold:#c99a3c; --gold-light:#e6c876;
+    --ink:#0f1b2d; --slate:#5c6b83; --slate-light:#93a1b8; --line:#e7e1d2;
+    --red-flag:#c8342f; --yellow-flag:#f2b632; --green-flag:#1e7a46; --blue-status:#2b5fb0;
+    --whatsapp:#1d9e52; --sms:#2b5fb0;
+    --error-bg:#fdecec; --error-text:#a32621; --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.01ms !important; transition-duration:.01ms !important;} }
+  html,body{margin:0; background:var(--cream); font-family:'Inter',system-ui,sans-serif; color:var(--ink);}
+  a{color:inherit;} button{font-family:inherit;}
+
+  header{position:sticky; top:0; z-index:20; background:var(--paper); border-bottom:1px solid var(--line);}
+  .flagbar{height:3px; background:linear-gradient(90deg, var(--red-flag) 0 33%, var(--yellow-flag) 33% 66%, var(--green-flag) 66% 100%);}
+  .headrow{display:flex; align-items:center; gap:12px; padding:13px 18px; max-width:860px; margin:0 auto;}
+  .iconbtn{width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--navy-800); flex:none; text-decoration:none;}
+  .iconbtn:hover{background:var(--cream);}
+  .head-title{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15.5px;}
+  .head-sub{font-size:11.5px; color:var(--slate-light);}
+
+  main{max-width:860px; margin:0 auto; padding:18px 18px 140px;}
+
+  .alert{display:none; align-items:flex-start; gap:9px; border-radius:10px; padding:11px 13px; font-size:13px; margin-bottom:16px;}
+  .alert.show{display:flex;}
+  .alert.err{background:var(--error-bg); color:var(--error-text); border:1px solid #f3c6c4;}
+  .alert.ok{background:#e8f6ee; color:#15603a; border:1px solid #bfe3ce;}
+
+  .tabs{display:flex; gap:8px; margin-bottom:16px; overflow-x:auto; padding-bottom:2px;}
+  .tab{
+    flex:none; border:1.5px solid var(--line); background:#fff; border-radius:11px;
+    padding:10px 14px; font-weight:600; font-size:13.5px; color:var(--slate); cursor:pointer;
+    display:flex; align-items:center; gap:8px; white-space:nowrap;
+  }
+  .tab.active{border-color:var(--navy-700); background:#eaf0fb; color:var(--navy-900);}
+  .tab .count{background:var(--navy-900); color:#fff; font-size:11.5px; border-radius:999px; padding:2px 8px; min-width:22px; text-align:center;}
+  .tab:not(.active) .count{background:var(--line); color:var(--slate);}
+
+  .card{background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); padding:18px; margin-bottom:16px;}
+  .card h2{margin:0 0 4px; font-family:'Space Grotesk',sans-serif; font-size:15.5px;}
+  .card .hint{font-size:12.5px; color:var(--slate-light); margin:0 0 14px;}
+
+  label{display:block; font-size:12.5px; font-weight:600; color:var(--slate); margin-bottom:6px;}
+  .input-shell{display:flex; align-items:center; border:1.5px solid #e3ddcd; border-radius:11px; background:#fff;}
+  .input-shell:focus-within{border-color:var(--navy-700); box-shadow:0 0 0 3px rgba(30,63,120,.12);}
+  input, select, textarea{width:100%; border:none; outline:none; background:transparent; padding:12px; font-size:14.5px; font-family:inherit; color:var(--ink);}
+  textarea{min-height:130px; resize:vertical; line-height:1.5;}
+  .field{margin-bottom:14px;}
+  .row-2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  @media (max-width:620px){ .row-2{grid-template-columns:1fr;} }
+
+  .tags{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+  .tag-ph{
+    background:var(--cream); border:1px solid var(--line); border-radius:999px;
+    font-size:11.5px; font-family:'Space Grotesk',sans-serif; color:var(--navy-800);
+    padding:4px 9px; cursor:pointer;
+  }
+  .tag-ph:hover{background:#eaf0fb; border-color:var(--navy-700);}
+
+  .preview{
+    background:var(--cream); border-radius:12px; padding:13px 15px; font-size:13.5px;
+    white-space:pre-wrap; line-height:1.5; color:var(--ink); margin-top:10px; border:1px dashed var(--line);
+  }
+
+  .toolbar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px;}
+  .toolbar .search{flex:1; min-width:180px;}
+  .linkbtn{background:none; border:none; color:var(--navy-700); font-weight:600; font-size:13px; cursor:pointer; padding:0;}
+  .linkbtn:hover{text-decoration:underline;}
+
+  .colis{
+    background:var(--paper); border:1px solid var(--line); border-radius:13px;
+    padding:14px 15px; margin-bottom:10px; display:flex; gap:13px; align-items:flex-start;
+  }
+  .colis.sent{opacity:.72;}
+  .colis input[type=checkbox]{width:18px; height:18px; accent-color:var(--navy-700); flex:none; margin:2px 0 0;}
+  .colis .body{flex:1; min-width:0;}
+  .colis .num{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14.5px;}
+  .colis .who{font-size:13.5px; margin-top:2px;}
+  .colis .meta{font-size:12px; color:var(--slate-light); margin-top:3px;}
+  .colis .tel{font-family:'Space Grotesk',sans-serif; font-size:12.5px; color:var(--slate);}
+  .badges{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+  .badge{font-size:11px; font-weight:700; border-radius:999px; padding:3px 9px; background:var(--cream); color:var(--slate);}
+  .badge.mode{background:#eaf0fb; color:var(--navy-800);}
+  .badge.arrive{background:#fdf2de; color:#8a6410;}
+  .badge.transit{background:#eaf0fb; color:var(--blue-status);}
+  .badge.done{background:#e8f6ee; color:var(--green-flag);}
+  .badge.notel{background:var(--error-bg); color:var(--error-text);}
+  .colis .actions{display:flex; flex-direction:column; gap:7px; flex:none;}
+  .mini{
+    border:none; border-radius:9px; padding:9px 13px; font-weight:600; font-size:12.5px;
+    cursor:pointer; color:#fff; text-decoration:none; display:flex; align-items:center; gap:6px; justify-content:center;
+  }
+  .mini.wa{background:var(--whatsapp);}
+  .mini.sms{background:var(--sms);}
+  .mini.ghost{background:#fff; border:1.5px solid var(--line); color:var(--navy-900);}
+  .mini[aria-disabled="true"]{opacity:.45; pointer-events:none;}
+
+  .empty{text-align:center; padding:46px 20px; color:var(--slate-light); font-size:14px;}
+
+  .bulkbar{
+    position:fixed; left:0; right:0; bottom:0; z-index:25; background:var(--paper);
+    border-top:1px solid var(--line); padding:12px 18px calc(12px + env(safe-area-inset-bottom));
+    display:none; gap:10px; align-items:center; flex-wrap:wrap;
+  }
+  .bulkbar.show{display:flex;}
+  .bulkbar .inner{max-width:860px; margin:0 auto; display:flex; gap:10px; align-items:center; flex-wrap:wrap; width:100%;}
+  .bulkbar .selcount{font-weight:700; font-size:13.5px; flex:none;}
+  .btn{
+    border:none; border-radius:12px; padding:13px 16px; font-family:'Space Grotesk',sans-serif;
+    font-weight:600; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn-primary{background:linear-gradient(160deg, var(--navy-700), var(--navy-900)); color:#fff; flex:1; min-width:170px;}
+  .btn-ghost{background:#fff; border:1.5px solid var(--line); color:var(--navy-900);}
+  .btn-gold{background:var(--gold); color:#2a1f05;}
+  .btn:disabled{opacity:.55; cursor:not-allowed;}
+
+  .overlay{
+    position:fixed; inset:0; z-index:40; background:rgba(10,24,48,.62);
+    display:none; align-items:center; justify-content:center; padding:18px;
+  }
+  .overlay.show{display:flex;}
+  .sheet{background:var(--paper); border-radius:18px; max-width:460px; width:100%; padding:22px; max-height:92vh; overflow:auto;}
+  .sheet .step-of{font-size:12px; color:var(--slate-light); font-weight:600;}
+  .sheet h3{margin:4px 0 2px; font-family:'Space Grotesk',sans-serif; font-size:19px;}
+  .sheet .qui{font-size:13px; color:var(--slate); margin-bottom:2px;}
+  .sheet .num-tel{font-family:'Space Grotesk',sans-serif; font-size:14px; color:var(--navy-800);}
+  .sheet .actions{display:flex; flex-direction:column; gap:9px; margin-top:16px;}
+  .sheet .big{padding:15px; font-size:15px; border-radius:12px; color:#fff; font-weight:700;
+    text-decoration:none; display:flex; align-items:center; justify-content:center; gap:9px; border:none; cursor:pointer;}
+  .sheet .big.wa{background:var(--whatsapp);}
+  .sheet .big.sms{background:var(--sms);}
+  .sheet .progress-line{height:5px; border-radius:3px; background:var(--line); margin:14px 0 2px; overflow:hidden;}
+  .sheet .progress-line i{display:block; height:100%; background:var(--gold); transition:width .25s ease;}
+  .sheet .skiprow{display:flex; gap:9px; margin-top:4px;}
+  .sheet .skiprow button{flex:1;}
+
+  .copyarea{position:absolute; left:-9999px; top:0;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="flagbar"></div>
+  <div class="headrow">
+    <a class="iconbtn" href="dashboard.html" aria-label="Retour">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <div>
+      <div class="head-title">Avis d'arrivée</div>
+      <div class="head-sub">Prévenir les clients par WhatsApp ou SMS</div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <div class="alert err" id="alertErr"><span id="alertErrMsg"></span></div>
+  <div class="alert ok" id="alertOk"><span id="alertOkMsg"></span></div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="a_prevenir">À prévenir <span class="count" id="cnt_a_prevenir">0</span></button>
+    <button class="tab" data-tab="en_transit">En transit <span class="count" id="cnt_en_transit">0</span></button>
+    <button class="tab" data-tab="prevenus">Déjà prévenus <span class="count" id="cnt_prevenus">0</span></button>
+  </div>
+
+  <div class="card">
+    <h2>Message envoyé aux clients</h2>
+    <p class="hint">Il est enregistré sur cet appareil et réutilisé à chaque envoi. Clique sur une étiquette pour l'insérer.</p>
+
+    <div class="row-2">
+      <div class="field">
+        <label for="quiPrevenir">Qui prévenir</label>
+        <div class="input-shell"><select id="quiPrevenir">
+          <option value="destinataire">Le destinataire</option>
+          <option value="expediteur">L'expéditeur</option>
+          <option value="les_deux">Les deux</option>
+        </select></div>
+      </div>
+      <div class="field">
+        <label for="canalPrefere">Canal proposé en premier</label>
+        <div class="input-shell"><select id="canalPrefere">
+          <option value="whatsapp">WhatsApp (SMS en secours)</option>
+          <option value="sms">SMS (WhatsApp en secours)</option>
+        </select></div>
+      </div>
+    </div>
+
+    <div class="field" style="margin-bottom:6px;">
+      <label for="modele">Texte du message</label>
+      <div class="input-shell"><textarea id="modele"></textarea></div>
+      <div class="tags" id="placeholders"></div>
+    </div>
+    <button class="linkbtn" id="resetModele">↺ Revenir au message d'origine</button>
+
+    <div class="preview" id="apercu">—</div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search input-shell"><input type="search" id="recherche" placeholder="Chercher un nom, un numéro de suivi, un téléphone…"></div>
+    <button class="linkbtn" id="toutCocher">Tout sélectionner</button>
+    <button class="linkbtn" id="toutDecocher">Tout décocher</button>
+  </div>
+
+  <div id="liste"></div>
+
+</main>
+
+<div class="bulkbar" id="bulkbar">
+  <div class="inner">
+    <span class="selcount" id="selCount">0 sélectionné</span>
+    <button class="btn btn-primary" id="btnEnvoiGroupe">📣 Prévenir la sélection</button>
+    <button class="btn btn-ghost" id="btnCopierNums">Copier les numéros</button>
+    <button class="btn btn-gold" id="btnMarquerArrive">Marquer « Arrivé »</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <div class="step-of" id="qStep">Client 1 sur 1</div>
+    <h3 id="qNom">—</h3>
+    <div class="qui" id="qRole">Destinataire · colis —</div>
+    <div class="num-tel" id="qTel">—</div>
+    <div class="preview" id="qMsg">—</div>
+
+    <div class="progress-line"><i id="qBar" style="width:0%"></i></div>
+
+    <div class="actions">
+      <a class="big wa" id="qWa" href="#" target="_blank" rel="noopener">Envoyer sur WhatsApp</a>
+      <a class="big sms" id="qSms" href="#">Envoyer par SMS</a>
+      <div class="skiprow">
+        <button class="btn btn-ghost" id="qSkip">Passer</button>
+        <button class="btn btn-ghost" id="qClose">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<textarea class="copyarea" id="copyarea" aria-hidden="true"></textarea>
+
+<script>
+  // ============================================================
+  // CONFIGURATION — mêmes clés que login.html / dashboard.html
+  // ============================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyDoWCBh3rschFm97Z5Y7ax1bamhadDS42Q",
+    authDomain: "africa-vision-3b38f.firebaseapp.com",
+    projectId: "africa-vision-3b38f",
+    storageBucket: "africa-vision-3b38f.firebasestorage.app",
+    messagingSenderId: "233363053035",
+    appId: "1:233363053035:web:6a5ef497fbf0991216e1ae"
+  };
+  const REQUIRE_AUTH = true;
+  const LOGIN_URL = "connexion.html";
+
+  // Adresse publique de la page de suivi. Laisse vide pour ne pas mettre de
+  // lien dans le message ; sinon l'étiquette {lien} ajoute « Suivi : … ».
+  // Exemple : "https://africavision140.github.io/suivi/"
+  const SUIVI_URL = "";
+
+  // Nombre maximum de colis chargés par onglet.
+  const LIMITE = 300;
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  let utilisateur = null;
+
+  auth.onAuthStateChanged(u => {
+    if(u){ utilisateur = u; charger(); }
+    else if(REQUIRE_AUTH){ window.location.href = LOGIN_URL; }
+    else { charger(); }
+  });
+
+  // ---------------- MODELE DE MESSAGE ----------------
+  const MODELE_DEFAUT =
+`Bonjour {prenom} {nom},
+
+Votre colis n° {numero} ({depart} → {arrivee}) est arrivé à notre bureau.
+Vous pouvez venir le retirer aux heures d'ouverture, avec une pièce d'identité.
+{lien}
+Africa Vision Multiservices — 612 39 83 18`;
+
+  const CLE_MODELE = 'avModeleAvisArrivee';
+  const champModele = document.getElementById('modele');
+  try{ champModele.value = localStorage.getItem(CLE_MODELE) || MODELE_DEFAUT; }
+  catch(e){ champModele.value = MODELE_DEFAUT; }
+
+  champModele.addEventListener('input', () => {
+    try{ localStorage.setItem(CLE_MODELE, champModele.value); }catch(e){}
+    majApercu();
+  });
+  document.getElementById('resetModele').addEventListener('click', () => {
+    champModele.value = MODELE_DEFAUT;
+    try{ localStorage.setItem(CLE_MODELE, MODELE_DEFAUT); }catch(e){}
+    majApercu();
+  });
+
+  const PLACEHOLDERS = ['{prenom}','{nom}','{numero}','{depart}','{arrivee}','{lien}'];
+  const zonePh = document.getElementById('placeholders');
+  PLACEHOLDERS.forEach(ph => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'tag-ph'; b.textContent = ph;
+    b.addEventListener('click', () => {
+      const i = champModele.selectionStart ?? champModele.value.length;
+      champModele.value = champModele.value.slice(0,i) + ph + champModele.value.slice(champModele.selectionEnd ?? i);
+      champModele.focus();
+      champModele.selectionStart = champModele.selectionEnd = i + ph.length;
+      try{ localStorage.setItem(CLE_MODELE, champModele.value); }catch(e){}
+      majApercu();
+    });
+    zonePh.appendChild(b);
+  });
+
+  function lienSuivi(c){
+    if(!SUIVI_URL) return "";
+    const sep = SUIVI_URL.indexOf('?') >= 0 ? '&' : '?';
+    return "Suivi : " + SUIVI_URL + sep + "num=" + encodeURIComponent(c.numeroSuivi || '') + "\n";
+  }
+  function messagePour(c, role){
+    const p = (c[role]) || {};
+    const r = c.route || {};
+    return champModele.value
+      .replace(/\{prenom\}/g, p.prenom || '')
+      .replace(/\{nom\}/g, p.nom || '')
+      .replace(/\{numero\}/g, c.numeroSuivi || '')
+      .replace(/\{depart\}/g, r.depart || '—')
+      .replace(/\{arrivee\}/g, r.arrivee || '—')
+      .replace(/\{lien\}/g, lienSuivi(c))
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+  function majApercu(){
+    const exemple = colisFiltres()[0] || {
+      numeroSuivi:'AV000000', route:{depart:'GUINÉE', arrivee:'SÉNÉGAL'},
+      destinataire:{prenom:'Mamadou', nom:'Bah'}, expediteur:{prenom:'Mamadou', nom:'Bah'}
+    };
+    const role = document.getElementById('quiPrevenir').value === 'expediteur' ? 'expediteur' : 'destinataire';
+    document.getElementById('apercu').textContent = messagePour(exemple, role);
+  }
+
+  // ---------------- TELEPHONE ----------------
+  const chiffres = t => (t || '').replace(/[^0-9]/g, '');
+  function telAffiche(t){ return (t || '').trim() || '—'; }
+  function lienWhatsapp(tel, msg){
+    return "https://wa.me/" + chiffres(tel) + "?text=" + encodeURIComponent(msg);
+  }
+  function lienSms(tel, msg){
+    const n = (tel || '').replace(/[^0-9+]/g, '');
+    return "sms:" + n + "?body=" + encodeURIComponent(msg);
+  }
+
+  // ---------------- CHARGEMENT ----------------
+  let onglet = 'a_prevenir';
+  let colis = [];                 // colis de l'onglet courant
+  let selection = new Set();      // ids cochés
+
+  function alerte(msg, ok){
+    const id = ok ? 'alertOk' : 'alertErr';
+    document.getElementById(id + 'Msg').textContent = msg;
+    document.getElementById(id).classList.add('show');
+    if(ok) setTimeout(() => document.getElementById(id).classList.remove('show'), 4000);
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+  function cacherAlertes(){
+    document.getElementById('alertErr').classList.remove('show');
+    document.getElementById('alertOk').classList.remove('show');
+  }
+
+  const dejaPrevenu = c => !!(c.avisArrivee && c.avisArrivee.envoye);
+
+  async function charger(){
+    cacherAlertes();
+    document.getElementById('liste').innerHTML = '<div class="empty">Chargement…</div>';
+    try{
+      // Requêtes à un seul champ : aucun index composite à créer dans Firestore.
+      const [snapArrive, snapTransit] = await Promise.all([
+        db.collection('colis').where('statut','==','arrive').limit(LIMITE).get(),
+        db.collection('colis').where('statut','==','en_transit').limit(LIMITE).get()
+      ]);
+      const lire = s => s.docs.map(d => Object.assign({id:d.id}, d.data()));
+      const arrives = lire(snapArrive);
+      const transit = lire(snapTransit);
+
+      TOUT = {
+        a_prevenir: arrives.filter(c => !dejaPrevenu(c)),
+        en_transit: transit,
+        prevenus:   arrives.filter(dejaPrevenu)
+      };
+      Object.keys(TOUT).forEach(k => {
+        TOUT[k].sort((a,b) => (b.dateCreation?.seconds||0) - (a.dateCreation?.seconds||0));
+        document.getElementById('cnt_' + k).textContent = TOUT[k].length;
+      });
+      rendre();
+    }catch(e){
+      console.error(e);
+      document.getElementById('liste').innerHTML = '';
+      alerte("Impossible de charger les colis. Vérifie ta connexion et les règles Firestore.", false);
+    }
+  }
+  let TOUT = {a_prevenir:[], en_transit:[], prevenus:[]};
+
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      onglet = t.dataset.tab;
+      selection.clear();
+      rendre();
+    });
+  });
+
+  document.getElementById('recherche').addEventListener('input', rendre);
+  document.getElementById('quiPrevenir').addEventListener('change', () => { rendre(); });
+  document.getElementById('canalPrefere').addEventListener('change', rendre);
+
+  function colisFiltres(){
+    const q = (document.getElementById('recherche').value || '').trim().toLowerCase();
+    const base = TOUT[onglet] || [];
+    if(!q) return base;
+    return base.filter(c => {
+      const d = c.destinataire || {}, e = c.expediteur || {};
+      return [c.numeroSuivi, d.nom, d.prenom, d.telephone, e.nom, e.prenom, e.telephone]
+        .filter(Boolean).join(' ').toLowerCase().includes(q);
+    });
+  }
+
+  function roleActif(){
+    const v = document.getElementById('quiPrevenir').value;
+    return v === 'expediteur' ? ['expediteur'] : (v === 'les_deux' ? ['destinataire','expediteur'] : ['destinataire']);
+  }
+
+  function rendre(){
+    const liste = document.getElementById('liste');
+    const items = colisFiltres();
+    liste.innerHTML = '';
+    majApercu();
+
+    if(!items.length){
+      const msg = onglet === 'a_prevenir'
+        ? "Aucun colis en attente d'avis. Passe un colis en « Arrivé » depuis l'onglet En transit."
+        : (onglet === 'en_transit' ? "Aucun colis en transit." : "Aucun client prévenu pour le moment.");
+      liste.innerHTML = '<div class="empty">' + msg + '</div>';
+      majBulk();
+      return;
+    }
+
+    const roles = roleActif();
+    const canal = document.getElementById('canalPrefere').value;
+
+    items.forEach(c => {
+      const d = c.destinataire || {}, e = c.expediteur || {};
+      const principal = roles[0] === 'expediteur' ? e : d;
+      const tel = principal.telephone || '';
+      const row = document.createElement('div');
+      row.className = 'colis' + (dejaPrevenu(c) ? ' sent' : '');
+
+      const msg = messagePour(c, roles[0]);
+      const sansTel = !chiffres(tel);
+
+      row.innerHTML =
+        '<input type="checkbox" ' + (selection.has(c.id) ? 'checked' : '') + ' aria-label="Sélectionner ' + (c.numeroSuivi||'') + '">' +
+        '<div class="body">' +
+          '<div class="num">' + esc(c.numeroSuivi || '—') + '</div>' +
+          '<div class="who">' + esc([principal.prenom, principal.nom].filter(Boolean).join(' ') || '—') +
+            ' <span style="color:var(--slate-light); font-size:12px;">· ' + (roles[0]==='expediteur'?'expéditeur':'destinataire') + '</span></div>' +
+          '<div class="tel">' + esc(telAffiche(tel)) + '</div>' +
+          '<div class="meta">' + esc((c.route&&c.route.depart)||'—') + ' → ' + esc((c.route&&c.route.arrivee)||'—') + '</div>' +
+          '<div class="badges">' +
+            '<span class="badge mode">' + (c.mode === 'maritime' ? '🚢 Maritime' : '✈️ Aérien') + '</span>' +
+            badgeStatut(c) +
+            (sansTel ? '<span class="badge notel">Pas de téléphone</span>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="actions">' +
+          '<a class="mini wa" target="_blank" rel="noopener" ' + (sansTel?'aria-disabled="true"':'') + ' href="' + lienWhatsapp(tel, msg) + '">WhatsApp</a>' +
+          '<a class="mini sms" ' + (sansTel?'aria-disabled="true"':'') + ' href="' + lienSms(tel, msg) + '">SMS</a>' +
+        '</div>';
+
+      if(canal === 'sms'){
+        const act = row.querySelector('.actions');
+        act.insertBefore(act.querySelector('.sms'), act.firstChild);
+      }
+
+      row.querySelector('input[type=checkbox]').addEventListener('change', ev => {
+        if(ev.target.checked) selection.add(c.id); else selection.delete(c.id);
+        majBulk();
+      });
+      row.querySelector('.mini.wa').addEventListener('click', () => marquerPrevenu(c, 'whatsapp', roles[0]));
+      row.querySelector('.mini.sms').addEventListener('click', () => marquerPrevenu(c, 'sms', roles[0]));
+
+      liste.appendChild(row);
+    });
+    majBulk();
+  }
+
+  function badgeStatut(c){
+    if(dejaPrevenu(c)) return '<span class="badge done">✓ Prévenu</span>';
+    if(c.statut === 'arrive') return '<span class="badge arrive">Arrivé au bureau</span>';
+    if(c.statut === 'en_transit') return '<span class="badge transit">En transit</span>';
+    return '<span class="badge">' + esc(c.statut || '—') + '</span>';
+  }
+  function esc(s){
+    return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ---------------- SELECTION ----------------
+  document.getElementById('toutCocher').addEventListener('click', () => {
+    colisFiltres().forEach(c => selection.add(c.id)); rendre();
+  });
+  document.getElementById('toutDecocher').addEventListener('click', () => {
+    selection.clear(); rendre();
+  });
+  function majBulk(){
+    const n = selection.size;
+    document.getElementById('selCount').textContent = n + (n > 1 ? ' sélectionnés' : ' sélectionné');
+    document.getElementById('bulkbar').classList.toggle('show', n > 0);
+    document.getElementById('btnEnvoiGroupe').disabled = (onglet === 'en_transit');
+    document.getElementById('btnMarquerArrive').style.display = (onglet === 'en_transit') ? 'flex' : 'none';
+  }
+  function selectionnes(){
+    const ids = selection;
+    return (TOUT[onglet] || []).filter(c => ids.has(c.id));
+  }
+
+  // ---------------- MARQUER « ARRIVÉ » ----------------
+  document.getElementById('btnMarquerArrive').addEventListener('click', async () => {
+    const liste = selectionnes();
+    if(!liste.length) return;
+    if(!confirm("Passer " + liste.length + " colis au statut « Arrivé au bureau » ?")) return;
+    const btn = document.getElementById('btnMarquerArrive');
+    btn.disabled = true;
+    try{
+      // Firestore limite un lot à 500 écritures.
+      for(let i = 0; i < liste.length; i += 450){
+        const lot = db.batch();
+        liste.slice(i, i+450).forEach(c => {
+          lot.update(db.collection('colis').doc(c.id), {
+            statut: 'arrive',
+            dateArrivee: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        });
+        await lot.commit();
+      }
+      selection.clear();
+      alerte(liste.length + " colis passés en « Arrivé ». Ils sont maintenant dans l'onglet À prévenir.", true);
+      await charger();
+    }catch(e){
+      console.error(e);
+      alerte("Impossible de mettre à jour les colis.", false);
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  // ---------------- MARQUER PRÉVENU ----------------
+  async function marquerPrevenu(c, canal, role){
+    try{
+      await db.collection('colis').doc(c.id).update({
+        avisArrivee: {
+          envoye: true,
+          canal: canal,
+          personne: role,
+          date: firebase.firestore.FieldValue.serverTimestamp(),
+          par: utilisateur ? (utilisateur.email || utilisateur.uid) : null
+        }
+      });
+      c.avisArrivee = {envoye:true, canal:canal, personne:role};
+    }catch(e){
+      // L'envoi est déjà parti : on ne bloque pas l'agent, on le signale seulement.
+      console.warn("Avis envoyé mais non enregistré :", e);
+    }
+  }
+
+  // ---------------- COPIER LES NUMÉROS (liste de diffusion) ----------------
+  document.getElementById('btnCopierNums').addEventListener('click', () => {
+    const roles = roleActif();
+    const nums = [];
+    selectionnes().forEach(c => {
+      roles.forEach(r => {
+        const t = (c[r] || {}).telephone;
+        if(chiffres(t)) nums.push(t.trim());
+      });
+    });
+    const uniques = Array.from(new Set(nums));
+    if(!uniques.length){ alerte("Aucun numéro de téléphone dans la sélection.", false); return; }
+    copier(uniques.join('\n'));
+    alerte(uniques.length + " numéros copiés. Colle-les dans une liste de diffusion WhatsApp pour un envoi unique.", true);
+  });
+
+  function copier(texte){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(texte).catch(() => copierSecours(texte));
+    }else copierSecours(texte);
+  }
+  function copierSecours(texte){
+    const z = document.getElementById('copyarea');
+    z.value = texte; z.select();
+    try{ document.execCommand('copy'); }catch(e){}
+  }
+
+  // ---------------- ENVOI GROUPÉ GUIDÉ ----------------
+  // Le navigateur bloque l'ouverture de plusieurs fenêtres d'un coup : on
+  // enchaîne donc les clients un par un, chaque envoi partant d'un clic.
+  let file = [];
+  let indexFile = 0;
+
+  document.getElementById('btnEnvoiGroupe').addEventListener('click', () => {
+    const roles = roleActif();
+    file = [];
+    selectionnes().forEach(c => {
+      roles.forEach(r => {
+        const p = c[r] || {};
+        if(chiffres(p.telephone)) file.push({colis:c, role:r});
+      });
+    });
+    if(!file.length){ alerte("Aucun numéro de téléphone utilisable dans la sélection.", false); return; }
+    indexFile = 0;
+    document.getElementById('overlay').classList.add('show');
+    afficherCourant();
+  });
+
+  function afficherCourant(){
+    if(indexFile >= file.length){ finFile(); return; }
+    const {colis:c, role} = file[indexFile];
+    const p = c[role] || {};
+    const msg = messagePour(c, role);
+    document.getElementById('qStep').textContent = "Client " + (indexFile+1) + " sur " + file.length;
+    document.getElementById('qNom').textContent = [p.prenom, p.nom].filter(Boolean).join(' ') || '—';
+    document.getElementById('qRole').textContent =
+      (role === 'expediteur' ? 'Expéditeur' : 'Destinataire') + " · colis " + (c.numeroSuivi || '—');
+    document.getElementById('qTel').textContent = telAffiche(p.telephone);
+    document.getElementById('qMsg').textContent = msg;
+    document.getElementById('qWa').href = lienWhatsapp(p.telephone, msg);
+    document.getElementById('qSms').href = lienSms(p.telephone, msg);
+    document.getElementById('qBar').style.width = Math.round((indexFile / file.length) * 100) + '%';
+
+    const canal = document.getElementById('canalPrefere').value;
+    const zone = document.querySelector('.sheet .actions');
+    const wa = document.getElementById('qWa'), sms = document.getElementById('qSms');
+    if(canal === 'sms') zone.insertBefore(sms, wa); else zone.insertBefore(wa, sms);
+  }
+
+  async function envoyerCourant(canal){
+    const {colis:c, role} = file[indexFile];
+    await marquerPrevenu(c, canal, role);
+    indexFile++;
+    // Laisse le temps à WhatsApp ou à l'app SMS de s'ouvrir avant de changer d'écran.
+    setTimeout(afficherCourant, 600);
+  }
+  document.getElementById('qWa').addEventListener('click', () => envoyerCourant('whatsapp'));
+  document.getElementById('qSms').addEventListener('click', () => envoyerCourant('sms'));
+  document.getElementById('qSkip').addEventListener('click', () => { indexFile++; afficherCourant(); });
+  document.getElementById('qClose').addEventListener('click', finFile);
+
+  function finFile(){
+    document.getElementById('overlay').classList.remove('show');
+    const faits = Math.min(indexFile, file.length);
+    if(faits > 0){
+      selection.clear();
+      alerte(faits + (faits > 1 ? " clients prévenus." : " client prévenu."), true);
+      charger();
+    }
+  }
+
+  majApercu();
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW non enregistré :', err));
+    });
+  }
+</script>
+</body>
+</html>
